@@ -1,5 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
 import { buildElevatorShaft } from "./build-features";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
@@ -16,6 +20,14 @@ const OPACITY = {
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
+const BACKGROUND = 0x0b1420;
+const FOG_DENSITY = 0.035;
+const GROUND_Y = -0.6;
+const GROUND_TEXTURE_SIZE = 2048;
+const GROUND_GRID_PITCH = 64;
+/** Frame-rate independent: 60Hz and 120Hz reach the target in the same time. */
+const TONE_TAU = 0.12;
+const TONE_EPSILON = 1e-3;
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const FLY_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ShiftLeft", "ShiftRight"]);
@@ -31,6 +43,66 @@ function clamp(value: number, min: number, max: number): number {
 function isTextEntry(element: Element | null): boolean {
   if (!(element instanceof HTMLElement)) return false;
   return element.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
+}
+
+type FloorTone = {
+  plan: number;
+  wall: number;
+  slab: number;
+  outline: number;
+  voidEdge: number;
+  core: number;
+  furniture: number;
+  lift: number;
+};
+
+const TONE_KEYS: (keyof FloorTone)[] = [
+  "plan",
+  "wall",
+  "slab",
+  "outline",
+  "voidEdge",
+  "core",
+  "furniture",
+  "lift",
+];
+
+/**
+ * Centre glow plus a fine grid. The ground is what turns six floating sheets
+ * into one building standing somewhere (§15.2).
+ */
+function createGroundTexture(): THREE.CanvasTexture | null {
+  const canvas = document.createElement("canvas");
+  canvas.width = GROUND_TEXTURE_SIZE;
+  canvas.height = GROUND_TEXTURE_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const size = GROUND_TEXTURE_SIZE;
+  const mid = size / 2;
+
+  ctx.fillStyle = "#0b1420";
+  ctx.fillRect(0, 0, size, size);
+  const glow = ctx.createRadialGradient(mid, mid, 0, mid, mid, mid);
+  glow.addColorStop(0, "rgba(101, 198, 168, 0.34)");
+  glow.addColorStop(0.35, "rgba(101, 198, 168, 0.11)");
+  glow.addColorStop(1, "rgba(11, 20, 32, 0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, size, size);
+
+  ctx.strokeStyle = "rgba(141, 228, 196, 0.11)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let p = 0; p <= size; p += GROUND_GRID_PITCH) {
+    ctx.moveTo(p + 0.5, 0);
+    ctx.lineTo(p + 0.5, size);
+    ctx.moveTo(0, p + 0.5);
+    ctx.lineTo(size, p + 0.5);
+  }
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 /**
@@ -49,6 +121,11 @@ export class FloorMapViewer {
   private readonly textures: THREE.Texture[] = [];
   private readonly structureGroup: THREE.Group;
   private readonly pressed = new Set<string>();
+  private readonly composer: EffectComposer | null;
+  private readonly bloomPass: UnrealBloomPass | null;
+  private readonly renderTarget: THREE.WebGLRenderTarget | null;
+  private readonly toneTarget: FloorTone[] = [];
+  private readonly toneCurrent: FloorTone[] = [];
   private lastFrame = 0;
   private readonly resizeObserver: ResizeObserver;
   private readonly buildingHeight: number;
@@ -58,21 +135,45 @@ export class FloorMapViewer {
   private selectedFloorId: string | null = null;
   private debugStack = false;
 
-  constructor(container: HTMLElement, building: BuildingDefinition) {
+  constructor(container: HTMLElement, building: BuildingDefinition, effects = true) {
     this.container = container;
     this.transform = planTransform(building.plan);
     this.buildingHeight = building.floors.length * LEVEL_HEIGHT;
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setClearColor(0x000000, 0);
+    // Opaque, unlike v1: EffectComposer does not compose over a transparent
+    // clear, so the background moves into the scene and the CSS gradient stays
+    // only as a pre-first-frame fallback.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.15;
     this.renderer.domElement.className = "campus-3d-canvas";
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(BACKGROUND);
+    this.scene.fog = new THREE.FogExp2(BACKGROUND, FOG_DENSITY);
     this.scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x1a2030, 0.95));
     const sun = new THREE.DirectionalLight(0xffffff, 0.65);
     sun.position.set(5, 10, 4);
     this.scene.add(sun);
+
+    const groundTexture = createGroundTexture();
+    if (groundTexture) {
+      this.textures.push(groundTexture);
+      const groundGeometry = new THREE.PlaneGeometry(
+        this.transform.width * 6,
+        this.transform.depth * 6,
+      );
+      groundGeometry.rotateX(-Math.PI / 2);
+      // FrontSide on purpose: flying below it with Q must not black out the view.
+      const ground = new THREE.Mesh(
+        groundGeometry,
+        new THREE.MeshBasicMaterial({ map: groundTexture, fog: true, depthWrite: false }),
+      );
+      ground.position.y = GROUND_Y;
+      ground.renderOrder = -1;
+      this.scene.add(ground);
+    }
 
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 120);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -130,7 +231,26 @@ export class FloorMapViewer {
       this.structureGroup.add(column, wires);
     }
 
+    if (effects) {
+      // samples: 4 is not optional — drawing into a render target disables the
+      // context's own antialiasing, and this is what buys v1's edge quality back.
+      this.renderTarget = new THREE.WebGLRenderTarget(1, 1, {
+        type: THREE.HalfFloatType,
+        samples: 4,
+      });
+      this.composer = new EffectComposer(this.renderer, this.renderTarget);
+      this.composer.addPass(new RenderPass(this.scene, this.camera));
+      this.bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.35, 0.6, 0.55);
+      this.composer.addPass(this.bloomPass);
+      this.composer.addPass(new OutputPass());
+    } else {
+      this.renderTarget = null;
+      this.composer = null;
+      this.bloomPass = null;
+    }
+
     this.applyFloorAppearance();
+    this.snapFloorTones();
 
     this.setCameraMode("orbit");
     window.addEventListener("keydown", this.onKeyDown);
@@ -188,15 +308,56 @@ export class FloorMapViewer {
         for (const material of materials) material.dispose();
       }
     });
+    this.bloomPass?.dispose();
+    this.composer?.dispose();
+    this.renderTarget?.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
 
+  /** Writes targets only; the render loop eases towards them (§15.4). */
   private applyFloorAppearance(): void {
-    for (const floor of this.floors) {
+    this.floors.forEach((floor, i) => {
       const selected = this.selectedFloorId === floor.id;
       const tone =
         this.selectedFloorId === null ? OPACITY.all : selected ? OPACITY.selected : OPACITY.dimmed;
+      this.toneTarget[i] = {
+        ...tone,
+        lift: this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0),
+      };
+    });
+    this.needsRender = true;
+  }
+
+  private snapFloorTones(): void {
+    this.toneTarget.forEach((tone, i) => {
+      this.toneCurrent[i] = { ...tone };
+    });
+    this.writeFloorTones();
+  }
+
+  /** Returns true on any frame that changed something, snapping included. */
+  private stepFloorTones(dt: number): boolean {
+    const blend = 1 - Math.exp(-dt / TONE_TAU);
+    let active = false;
+    this.toneCurrent.forEach((current, i) => {
+      const target = this.toneTarget[i];
+      for (const key of TONE_KEYS) {
+        const gap = target[key] - current[key];
+        // Exact, because the snap below assigns the target itself: once a value
+        // has landed it reports no work, and the loop is allowed to stop.
+        if (gap === 0) continue;
+        current[key] = Math.abs(gap) < TONE_EPSILON ? target[key] : current[key] + gap * blend;
+        active = true;
+      }
+    });
+    if (active) this.writeFloorTones();
+    return active;
+  }
+
+  private writeFloorTones(): void {
+    this.floors.forEach((floor, i) => {
+      const tone = this.toneCurrent[i];
       floor.planMaterial.opacity = tone.plan;
       floor.wallMaterial.opacity = tone.wall;
       floor.slabMaterial.opacity = tone.slab;
@@ -204,17 +365,27 @@ export class FloorMapViewer {
       if (floor.voidEdgeMaterial) floor.voidEdgeMaterial.opacity = tone.voidEdge;
       if (floor.coreMaterial) floor.coreMaterial.opacity = tone.core;
       if (floor.furnitureMaterial) floor.furnitureMaterial.opacity = tone.furniture;
-      floor.group.position.y = this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0);
-    }
-    this.needsRender = true;
+      floor.group.position.y = tone.lift;
+    });
+  }
+
+  private renderFrame(): void {
+    if (this.composer) this.composer.render();
+    else this.renderer.render(this.scene, this.camera);
   }
 
   private resize(): void {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
     if (width === 0 || height === 0) return;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+    const pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO);
+    this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(width, height);
+    if (this.composer) {
+      this.composer.setPixelRatio(pixelRatio);
+      this.composer.setSize(width, height);
+    }
+    this.bloomPass?.resolution.set(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.needsRender = true;
@@ -287,10 +458,11 @@ export class FloorMapViewer {
     const dt = this.lastFrame === 0 ? 0 : Math.min((now - this.lastFrame) / 1000, MAX_FRAME_SECONDS);
     this.lastFrame = now;
     this.flyStep(dt);
+    const tweening = this.stepFloorTones(dt);
     const moved = this.controls.update();
-    if (moved || this.needsRender) {
+    if (moved || tweening || this.needsRender) {
       this.needsRender = false;
-      this.renderer.render(this.scene, this.camera);
+      this.renderFrame();
     }
     this.raf = requestAnimationFrame(this.renderLoop);
   };

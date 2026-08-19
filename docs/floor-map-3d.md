@@ -379,7 +379,7 @@ python scripts/floorplan/preview_features.py --floor 3
 ```ts
 const shape = new THREE.Shape(footprint.map(([nx, nz]) =>
   new THREE.Vector2(toWorldX(nx, t), toWorldZ(nz, t))));
-for (const v of voids) shape.holes.push(new THREE.Path(rectPoints(v)));  // 逆回り
+for (const v of voids) shape.holes.push(new THREE.Path(rectPoints(v)));
 const geo = new THREE.ExtrudeGeometry(shape, { depth: SLAB_THICKNESS, bevelEnabled: false });
 geo.rotateX(Math.PI / 2);
 ```
@@ -389,7 +389,8 @@ geo.rotateX(Math.PI / 2);
 **平面の y がそのまま world z(+z = 図面の下、v1 と同符号)になり、
 スラブは y ∈ [-SLAB_THICKNESS, 0] を占める** —— v1 の
 `slab.position.y = -SLAB_THICKNESS/2` と完全に同じ位置。追加の平行移動は要らない。
-穴(`holes`)は輪郭と逆回りで与える。
+穴(`holes`)の巻き順は問わない —— `ExtrudeGeometry` が `ShapeUtils.isClockWise` で
+輪郭を時計回りに正規化し、その際に穴を反対回りへ揃える(実装確認済み)。
 
 ### 11.2 開口の縁 —— LineSegments
 

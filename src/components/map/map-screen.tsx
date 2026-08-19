@@ -25,6 +25,7 @@ export function MapScreen() {
     parseFloorParam(searchParams.get("floor")),
   );
   const debugStack = process.env.NODE_ENV !== "production" && searchParams.get("debug") === "stack";
+  const effects = searchParams.get("fx") !== "off";
   const selectedFloor = building.floors.find((floor) => floor.id === selectedFloorId);
 
   const selectFloor = (id: string | null) => {
@@ -67,7 +68,7 @@ export function MapScreen() {
             </div>
 
             <div className={`map-stage ${cameraMode === "north" ? "map-stage-north" : ""}`}>
-              <FloorMapCanvas building={building} selectedFloorId={selectedFloorId} cameraMode={cameraMode} debugStack={debugStack} />
+              <FloorMapCanvas building={building} selectedFloorId={selectedFloorId} cameraMode={cameraMode} debugStack={debugStack} effects={effects} />
               <div className="campus-3d-floor-readout">{selectedFloor ? `${selectedFloor.label} / ${selectedFloor.title}` : "ALL FLOORS"}</div>
               <div className="campus-3d-hint">WASD 移動 / QE 上下 / DRAG 回転 / WHEEL ズーム</div>
               <div className="map-compass" aria-hidden="true"><span>N</span><i /></div>

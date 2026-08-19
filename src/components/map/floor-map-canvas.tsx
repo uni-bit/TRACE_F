@@ -10,16 +10,18 @@ type FloorMapCanvasProps = {
   selectedFloorId: string | null;
   cameraMode: CameraMode;
   debugStack?: boolean;
+  /** ?fx=off bypasses the composer for low-end devices. */
+  effects?: boolean;
 };
 
-export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugStack = false }: FloorMapCanvasProps) {
+export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugStack = false, effects = true }: FloorMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<FloorMapViewer | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const viewer = new FloorMapViewer(container, building);
+    const viewer = new FloorMapViewer(container, building, effects);
     viewerRef.current = viewer;
     const devWindow = window as Window & { __traceFloorMapViewer?: FloorMapViewer };
     if (process.env.NODE_ENV !== "production") devWindow.__traceFloorMapViewer = viewer;
@@ -28,7 +30,7 @@ export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugSta
       viewerRef.current = null;
       viewer.dispose();
     };
-  }, [building]);
+  }, [building, effects]);
 
   useEffect(() => {
     viewerRef.current?.setSelectedFloor(selectedFloorId);
