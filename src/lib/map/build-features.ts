@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { LEVEL_HEIGHT, toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
-import type { ClassroomRow, ElevatorShaft, FloorFeatures, NormRect, PlanAxis } from "./types";
+import type { CommonArea, ElevatorShaft, FloorFeatures, NormRect, PlanAxis } from "./types";
 
 /** The plan hatching only ever draws one flight, so we only build one (§12.1). */
 const STEPS = 12;
@@ -25,6 +25,19 @@ const DESK_SIZE_Z = 0.05;
 const DESK_HEIGHT = 0.035;
 const DESK_MAX_COLS = 8;
 const DESK_MAX_ROWS = 10;
+
+const BENCH_LENGTH = 0.06;
+const BENCH_DEPTH = 0.03;
+const BENCH_HEIGHT = 0.03;
+const PLANTER_RADIUS = 0.016;
+const PLANTER_HEIGHT = 0.05;
+const TABLE_RADIUS = 0.035;
+const TABLE_HEIGHT = 0.03;
+const CORRIDOR_PITCH = 0.5;
+const HALL_PITCH = 0.35;
+const COMMON_EDGE_INSET = 0.05;
+/** Below this across-span a corridor gets objects on one edge only. */
+const NARROW_LANE = 0.12;
 
 interface WorldRect {
   x0: number;
@@ -183,25 +196,110 @@ export function buildElevatorShaft(
 }
 
 /**
- * Desks and whiteboards for every classroom on a floor, merged into one
- * geometry. This is schematic furniture, not a seating plan: the point is to
- * give the rooms a sense of scale (§13, and the inspector copy says so).
+ * Desks, whiteboards, and common-area objects for a floor, merged into one
+ * geometry. This is schematic furniture, not a seating plan: the classroom
+ * desks give the rooms a sense of scale, and the corridor benches / hall
+ * tables mark walkable slab so it can never be misread as a void (§13, and
+ * the inspector copy says so).
  */
 export function buildFurnitureGeometry(
-  classrooms: ClassroomRow[],
+  features: FloorFeatures,
   transform: PlanTransform,
 ): THREE.BufferGeometry | null {
   const parts: THREE.BufferGeometry[] = [];
-  for (const band of classrooms) {
+  for (const band of features.classrooms) {
     for (const [z0, z1] of band.rows) {
       const room = toWorldRect({ x0: band.x[0], x1: band.x[1], z0, z1 }, transform);
       parts.push(whiteboard(room, band.facing), ...desks(room));
     }
   }
+  for (const area of features.commons) {
+    parts.push(...commonObjects(area, transform));
+  }
   if (parts.length === 0) return null;
   const merged = mergeGeometries(parts);
   for (const part of parts) part.dispose();
   return merged;
+}
+
+/**
+ * Deterministic layouts on purpose — a scatter that reshuffles on every page
+ * load would read as noise, not as a building. Corridors alternate benches and
+ * planters along both edges (walking lane kept clear); halls get round tables
+ * on a checkerboard with planters in the corners.
+ */
+function commonObjects(area: CommonArea, transform: PlanTransform): THREE.BufferGeometry[] {
+  const rect = toWorldRect(area.rect, transform);
+  return area.kind === "corridor" ? corridorObjects(rect) : hallObjects(rect);
+}
+
+function planter(x: number, z: number): THREE.BufferGeometry {
+  const pot = new THREE.CylinderGeometry(PLANTER_RADIUS, PLANTER_RADIUS, PLANTER_HEIGHT, 10);
+  pot.translate(x, PLANTER_HEIGHT / 2, z);
+  return pot;
+}
+
+function corridorObjects(rect: WorldRect): THREE.BufferGeometry[] {
+  const spanX = rect.x1 - rect.x0;
+  const spanZ = rect.z1 - rect.z0;
+  const alongX = spanX >= spanZ;
+  const run = alongX ? spanX : spanZ;
+  const acrossSpan = alongX ? spanZ : spanX;
+  const acrossEdges =
+    acrossSpan < NARROW_LANE
+      ? [acrossSpan / 2]
+      : [COMMON_EDGE_INSET, acrossSpan - COMMON_EDGE_INSET];
+
+  const count = Math.max(1, Math.floor(run / CORRIDOR_PITCH));
+  const step = run / count;
+  const parts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const along = (alongX ? rect.x0 : rect.z0) + step * (i + 0.5);
+    const across = (alongX ? rect.z0 : rect.x0) + acrossEdges[i % acrossEdges.length];
+    const x = alongX ? along : across;
+    const z = alongX ? across : along;
+    if (i % 2 === 0) {
+      const bench = new THREE.BoxGeometry(
+        alongX ? BENCH_LENGTH : BENCH_DEPTH,
+        BENCH_HEIGHT,
+        alongX ? BENCH_DEPTH : BENCH_LENGTH,
+      );
+      bench.translate(x, BENCH_HEIGHT / 2, z);
+      parts.push(bench);
+    } else {
+      parts.push(planter(x, z));
+    }
+  }
+  return parts;
+}
+
+function hallObjects(rect: WorldRect): THREE.BufferGeometry[] {
+  const spanX = rect.x1 - rect.x0;
+  const spanZ = rect.z1 - rect.z0;
+  const cols = Math.max(1, Math.floor(spanX / HALL_PITCH));
+  const rows = Math.max(1, Math.floor(spanZ / HALL_PITCH));
+  const originX = (rect.x0 + rect.x1) / 2 - (cols * HALL_PITCH) / 2;
+  const originZ = (rect.z0 + rect.z1) / 2 - (rows * HALL_PITCH) / 2;
+
+  const parts: THREE.BufferGeometry[] = [];
+  for (let c = 0; c < cols; c += 1) {
+    for (let r = 0; r < rows; r += 1) {
+      if ((c + r) % 2 !== 0) continue;
+      const table = new THREE.CylinderGeometry(TABLE_RADIUS, TABLE_RADIUS, TABLE_HEIGHT, 12);
+      table.translate(
+        originX + HALL_PITCH * (c + 0.5),
+        TABLE_HEIGHT / 2,
+        originZ + HALL_PITCH * (r + 0.5),
+      );
+      parts.push(table);
+    }
+  }
+  for (const cx of [rect.x0 + COMMON_EDGE_INSET, rect.x1 - COMMON_EDGE_INSET]) {
+    for (const cz of [rect.z0 + COMMON_EDGE_INSET, rect.z1 - COMMON_EDGE_INSET]) {
+      parts.push(planter(cx, cz));
+    }
+  }
+  return parts;
 }
 
 function whiteboard(room: WorldRect, facing: PlanAxis): THREE.BufferGeometry {

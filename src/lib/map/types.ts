@@ -64,6 +64,17 @@ export interface ClassroomRow {
   facing: PlanAxis;
 }
 
+export type CommonKind = "corridor" | "hall";
+
+/**
+ * Invented walkable zone (not a plan symbol): populated with schematic
+ * benches/planters/tables so occupied floor reads apart from the voids.
+ */
+export interface CommonArea {
+  rect: NormRect;
+  kind: CommonKind;
+}
+
 export interface ElevatorShaft {
   id: string;
   rect: NormRect;
@@ -76,6 +87,7 @@ export interface FloorFeatures {
   stairs: StairFeature[];
   escalators: EscalatorFeature[];
   classrooms: ClassroomRow[];
+  commons: CommonArea[];
 }
 
 export interface BuildingFeatures {

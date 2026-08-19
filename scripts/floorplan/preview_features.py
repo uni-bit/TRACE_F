@@ -35,6 +35,7 @@ COLORS = {
     "escalator": (250, 140, 40),
     "elevator": (70, 130, 250),
     "classroom": (60, 200, 90),
+    "commons": (80, 200, 220),
 }
 
 ARROWS = {"+x": (1, 0), "-x": (-1, 0), "+z": (0, 1), "-z": (0, -1)}
@@ -114,6 +115,14 @@ def render_floor(floor_id: str, data: dict) -> None:
                 draw.line([(x0, z0), (x0, z1)], fill=COLORS["classroom"] + (255,), width=7)
             else:
                 draw.line([(x1, z0), (x1, z1)], fill=COLORS["classroom"] + (255,), width=7)
+
+    # Commons are invented zones, not plan symbols: the pass criterion is only
+    # that they stay on walkable floor (inside the footprint, clear of voids,
+    # cores and classroom rows), not that they match any drawn feature.
+    for c in floor.get("commons", []):
+        x0, y0, x1, y1 = c["rect"]
+        draw.rectangle(c["rect"], fill=COLORS["commons"] + (44,), outline=COLORS["commons"] + (255,), width=3)
+        draw.text(((x0 + x1) / 2 - 4, (y0 + y1) / 2 - 6), c["kind"][0].upper(), fill=COLORS["commons"] + (255,))
 
     for ev in data.get("elevators", []):
         lo, hi = ev["levels"]

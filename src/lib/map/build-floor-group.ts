@@ -25,7 +25,7 @@ export interface FloorHandle {
   voidEdgeMaterial: THREE.LineBasicMaterial | null;
   /** Null on the top floor, whose stairs and escalators lead nowhere. */
   coreMaterial: THREE.MeshLambertMaterial | null;
-  /** Null on floors with no classrooms (1F, 2F). */
+  /** Null on floors with neither classrooms nor common areas. */
   furnitureMaterial: THREE.MeshLambertMaterial | null;
 }
 
@@ -103,7 +103,7 @@ export function buildFloorGroup(
   // Deliberately a separate material from the cores: the furniture is invented
   // and has to be able to fade out well below anything traced from the plan.
   let furnitureMaterial: THREE.MeshLambertMaterial | null = null;
-  const furnitureGeometry = buildFurnitureGeometry(floor.features.classrooms, transform);
+  const furnitureGeometry = buildFurnitureGeometry(floor.features, transform);
   if (furnitureGeometry) {
     furnitureMaterial = new THREE.MeshLambertMaterial({
       color: 0x9fd8c6,

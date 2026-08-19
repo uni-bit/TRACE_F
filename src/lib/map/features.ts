@@ -22,10 +22,12 @@ interface RawFloorFeatures {
   stairs?: { id: string; rect: PxRect; up: string }[];
   escalators?: { id: string; rect: PxRect; up: string; lanes: number }[];
   classrooms?: { x: number[]; rows: number[][]; facing?: string }[];
+  commons?: { rect: PxRect; kind: string }[];
 }
 
 const AXES: PlanAxis[] = ["+x", "-x", "+z", "-z"];
 const VOID_KINDS = ["atrium", "escalator-well", "stair-well"];
+const COMMON_KINDS = ["corridor", "hall"];
 
 function fail(message: string): never {
   throw new Error(`toyosu-classroom.features.json: ${message}`);
@@ -90,6 +92,13 @@ function normFloor(floorId: string, features: RawFloorFeatures, plan: BuildingPl
         facing: checkAxis(c.facing ?? "-z", context),
       };
     }),
+    commons: (features.commons ?? []).map((c, i) => {
+      if (!COMMON_KINDS.includes(c.kind)) fail(`${at(`common #${i}`)}: invalid kind "${c.kind}"`);
+      return {
+        rect: normRect(c.rect, plan, at(`common #${i}`)),
+        kind: c.kind as FloorFeatures["commons"][number]["kind"],
+      };
+    }),
   };
 }
 
@@ -108,7 +117,7 @@ export function loadFeatures(buildingId: string, plan: BuildingPlan, floorIds: s
     byFloor[floorId] = normFloor(floorId, features, plan);
   }
   for (const floorId of floorIds) {
-    byFloor[floorId] ??= { voids: [], stairs: [], escalators: [], classrooms: [] };
+    byFloor[floorId] ??= { voids: [], stairs: [], escalators: [], classrooms: [], commons: [] };
   }
 
   const footprintsByFloor: Record<string, [number, number][]> = {};
