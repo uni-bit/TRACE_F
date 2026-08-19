@@ -11,6 +11,21 @@ from PIL import Image
 from .common import ROOT
 
 
+def _blueprint_rgba(rgb: np.ndarray, params: dict) -> np.ndarray:
+    """White paper -> transparent, ink -> lightened color.
+
+    The 3D map renders floors on a dark stage; an opaque white plan reads as a
+    blank card. Alpha from darkness keeps only the drawn ink, and lightening
+    keeps black label text legible against the dark background.
+    """
+    lum = rgb.astype(np.float32).mean(axis=2) / 255.0
+    alpha = np.clip((1.0 - lum) * params["alphaGain"], 0.0, 1.0) * 255.0
+    lighten = params["inkLighten"]
+    out_rgb = 255.0 - (255.0 - rgb.astype(np.float32)) * (1.0 - lighten)
+    rgba = np.dstack([out_rgb, alpha]).astype(np.uint8)
+    return rgba
+
+
 def emit(
     config: dict,
     crops: dict[str, np.ndarray],
@@ -27,9 +42,7 @@ def emit(
     print("  emit")
     for floor in sorted(crops, key=int):
         name = out["texturePattern"].format(floor=floor)
-        img = Image.fromarray(crops[floor]).quantize(
-            colors=config["texture"]["quantizeColors"], dither=Image.Dither.NONE
-        )
+        img = Image.fromarray(_blueprint_rgba(crops[floor], config["texture"]))
         path = texture_dir / name
         img.save(path, optimize=True)
         print(f"    {path.relative_to(ROOT)} ({path.stat().st_size // 1024} KB, {len(walls[floor])} wall segments)")

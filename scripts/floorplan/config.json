@@ -56,7 +56,7 @@
     "mergeParallelPx": 4,
     "minSegmentFrac": 0.02
   },
-  "texture": { "quantizeColors": 32 },
+  "texture": { "alphaGain": 2.2, "inkLighten": 0.55 },
   "output": {
     "textureDir": "public/floorplans/classroom",
     "texturePattern": "floor-{floor}.png",
