@@ -17,6 +17,22 @@ const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
+const FLY_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ShiftLeft", "ShiftRight"]);
+const FLY_SPEED = 2.2;
+const FLY_BOOST = 3;
+/** Long frames (a backgrounded tab) must not teleport the camera. */
+const MAX_FRAME_SECONDS = 0.05;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isTextEntry(element: Element | null): boolean {
+  if (!(element instanceof HTMLElement)) return false;
+  return element.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(element.tagName);
+}
+
 /**
  * Imperative three.js viewer, deliberately React-free: it is constructed once
  * per canvas lifetime and mutated through the set* methods, so floor/camera
@@ -32,6 +48,8 @@ export class FloorMapViewer {
   private readonly floors: FloorHandle[];
   private readonly textures: THREE.Texture[] = [];
   private readonly structureGroup: THREE.Group;
+  private readonly pressed = new Set<string>();
+  private lastFrame = 0;
   private readonly resizeObserver: ResizeObserver;
   private readonly buildingHeight: number;
   private raf = 0;
@@ -115,6 +133,9 @@ export class FloorMapViewer {
     this.applyFloorAppearance();
 
     this.setCameraMode("orbit");
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onBlur);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
     this.resize();
@@ -154,6 +175,9 @@ export class FloorMapViewer {
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onBlur);
     this.resizeObserver.disconnect();
     this.controls.dispose();
     for (const texture of this.textures) texture.dispose();
@@ -196,8 +220,73 @@ export class FloorMapViewer {
     this.needsRender = true;
   }
 
-  private readonly renderLoop = (): void => {
+  private readonly onKeyDown = (event: KeyboardEvent): void => {
+    // Leave browser shortcuts and any focused field alone. A focused floor
+    // button still flies, but W/A/S/D mean nothing to a button.
+    if (event.ctrlKey || event.metaKey || isTextEntry(document.activeElement)) return;
+    if (!FLY_KEYS.has(event.code)) return;
+    this.pressed.add(event.code);
+    this.needsRender = true;
+  };
+
+  private readonly onKeyUp = (event: KeyboardEvent): void => {
+    this.pressed.delete(event.code);
+  };
+
+  /** Without this, leaving the tab mid-stride leaves the key held forever. */
+  private readonly onBlur = (): void => {
+    this.pressed.clear();
+  };
+
+  /**
+   * Pure pan: camera and orbit target take the same delta, so the pivot travels
+   * along and the view can still be orbited in place after moving.
+   */
+  private flyStep(dt: number): void {
+    if (this.pressed.size === 0) return;
+
+    const forward = new THREE.Vector3().subVectors(this.controls.target, this.camera.position);
+    forward.y = 0;
+    if (forward.lengthSq() < 1e-8) {
+      // Straight down (NORTH): the horizontal component of the view direction
+      // is gone, so steer by the camera's own up axis instead — on screen that
+      // is the top of the viewport, which in NORTH is plan north.
+      this.camera.updateMatrixWorld();
+      forward.setFromMatrixColumn(this.camera.matrixWorld, 1);
+      forward.y = 0;
+      if (forward.lengthSq() < 1e-8) return;
+    }
+    forward.normalize();
+    const right = new THREE.Vector3().crossVectors(forward, WORLD_UP).normalize();
+
+    const step = new THREE.Vector3();
+    if (this.pressed.has("KeyW")) step.add(forward);
+    if (this.pressed.has("KeyS")) step.sub(forward);
+    if (this.pressed.has("KeyD")) step.add(right);
+    if (this.pressed.has("KeyA")) step.sub(right);
+    if (this.pressed.has("KeyE")) step.y += 1;
+    if (this.pressed.has("KeyQ")) step.y -= 1;
+    if (step.lengthSq() === 0) return;
+
+    const boosted = this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight");
+    step.normalize().multiplyScalar(FLY_SPEED * (boosted ? FLY_BOOST : 1) * dt);
+
+    const target = this.controls.target;
+    const from = target.clone();
+    target.add(step);
+    target.x = clamp(target.x, -this.transform.width * 2, this.transform.width * 2);
+    target.z = clamp(target.z, -this.transform.depth * 2, this.transform.depth * 2);
+    target.y = clamp(target.y, -1, this.buildingHeight + 8);
+    // Whatever the clamp actually allowed, not what was asked for.
+    this.camera.position.add(target.clone().sub(from));
+    this.needsRender = true;
+  }
+
+  private readonly renderLoop = (now: number): void => {
     if (this.disposed) return;
+    const dt = this.lastFrame === 0 ? 0 : Math.min((now - this.lastFrame) / 1000, MAX_FRAME_SECONDS);
+    this.lastFrame = now;
+    this.flyStep(dt);
     const moved = this.controls.update();
     if (moved || this.needsRender) {
       this.needsRender = false;

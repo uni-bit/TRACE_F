@@ -69,7 +69,7 @@ export function MapScreen() {
             <div className={`map-stage ${cameraMode === "north" ? "map-stage-north" : ""}`}>
               <FloorMapCanvas building={building} selectedFloorId={selectedFloorId} cameraMode={cameraMode} debugStack={debugStack} />
               <div className="campus-3d-floor-readout">{selectedFloor ? `${selectedFloor.label} / ${selectedFloor.title}` : "ALL FLOORS"}</div>
-              <div className="campus-3d-hint">DRAG 回転 / 右DRAG 移動 / WHEEL ズーム</div>
+              <div className="campus-3d-hint">WASD 移動 / QE 上下 / DRAG 回転 / WHEEL ズーム</div>
               <div className="map-compass" aria-hidden="true"><span>N</span><i /></div>
             </div>
             <div className="map-stage-footer"><span>THREE.JS / CLASSROOM BUILDING / OFFICIAL PLAN LAYERS</span><span>2D FLOOR MAPS / WALL LINES</span></div>
