@@ -12,6 +12,13 @@ export interface PlanTransform {
 
 const PLAN_WORLD_WIDTH = 6;
 
+/**
+ * Vertical companion to the plan scale: the storey pitch every stacked drawable
+ * is measured against. It lives here so nothing outside this module invents its
+ * own idea of how tall a floor is (an exaggerated value, see docs §3).
+ */
+export const LEVEL_HEIGHT = 0.42;
+
 export function planTransform(plan: BuildingPlan): PlanTransform {
   return {
     width: PLAN_WORLD_WIDTH,

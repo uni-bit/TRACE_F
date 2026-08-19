@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
-import { toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
+import { buildCoreGeometry } from "./build-features";
+import { LEVEL_HEIGHT, toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
 import type { BuildingFloor, NormRect, VoidFeature } from "./types";
 
-export const LEVEL_HEIGHT = 0.42;
 export const WALL_HEIGHT = 0.3;
 const SLAB_THICKNESS = 0.03;
 const WALL_THICKNESS = 0.045;
@@ -23,6 +23,8 @@ export interface FloorHandle {
   outlineMaterial: THREE.LineBasicMaterial;
   /** Null on floors that have no openings (1F). */
   voidEdgeMaterial: THREE.LineBasicMaterial | null;
+  /** Null on the top floor, whose stairs and escalators lead nowhere. */
+  coreMaterial: THREE.MeshLambertMaterial | null;
 }
 
 /**
@@ -38,6 +40,7 @@ export function buildFloorGroup(
   floor: BuildingFloor,
   transform: PlanTransform,
   footprint: [number, number][],
+  isTopFloor: boolean,
 ): FloorHandle {
   const group = new THREE.Group();
   const baseY = (floor.level - 1) * LEVEL_HEIGHT;
@@ -82,6 +85,19 @@ export function buildFloorGroup(
     group.add(walls);
   }
 
+  let coreMaterial: THREE.MeshLambertMaterial | null = null;
+  const coreGeometry = buildCoreGeometry(floor.features, transform, isTopFloor);
+  if (coreGeometry) {
+    coreMaterial = new THREE.MeshLambertMaterial({
+      color: 0x8de4c4,
+      transparent: true,
+      depthWrite: false,
+    });
+    const cores = new THREE.Mesh(coreGeometry, coreMaterial);
+    cores.renderOrder = order + 3;
+    group.add(cores);
+  }
+
   const outlineMaterial = new THREE.LineBasicMaterial({
     color: 0x8de4c4,
     transparent: true,
@@ -116,6 +132,7 @@ export function buildFloorGroup(
     wallMaterial,
     outlineMaterial,
     voidEdgeMaterial,
+    coreMaterial,
   };
 }
 

@@ -1,16 +1,19 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { buildFloorGroup, LEVEL_HEIGHT, type FloorHandle } from "./build-floor-group";
+import { buildElevatorShaft } from "./build-features";
+import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
-import { planTransform, type PlanTransform } from "./plan-transform";
+import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
 import type { BuildingDefinition, CameraMode } from "./types";
 
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06 },
-  all: { plan: 0.65, wall: 0.4, slab: 0.18, outline: 0.35, voidEdge: 0.6 },
+  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1, core: 0.45 },
+  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06, core: 0.04 },
+  all: { plan: 0.65, wall: 0.4, slab: 0.18, outline: 0.35, voidEdge: 0.6, core: 0.25 },
 } as const;
+/** The shafts read the same whatever floor is picked — they are the skewer. */
+const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 
@@ -28,6 +31,7 @@ export class FloorMapViewer {
   private readonly transform: PlanTransform;
   private readonly floors: FloorHandle[];
   private readonly textures: THREE.Texture[] = [];
+  private readonly structureGroup: THREE.Group;
   private readonly resizeObserver: ResizeObserver;
   private readonly buildingHeight: number;
   private raf = 0;
@@ -65,8 +69,14 @@ export class FloorMapViewer {
 
     const loader = new THREE.TextureLoader();
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    const topLevel = Math.max(...building.floors.map((f) => f.level));
     this.floors = building.floors.map((floor) => {
-      const handle = buildFloorGroup(floor, this.transform, footprintFor(building, floor.id));
+      const handle = buildFloorGroup(
+        floor,
+        this.transform,
+        footprintFor(building, floor.id),
+        floor.level === topLevel,
+      );
       this.scene.add(handle.group);
       const texture = loader.load(floor.texture, () => {
         if (this.disposed) return;
@@ -79,6 +89,29 @@ export class FloorMapViewer {
       this.textures.push(texture);
       return handle;
     });
+    this.structureGroup = new THREE.Group();
+    this.scene.add(this.structureGroup);
+    const shaftSolid = new THREE.MeshLambertMaterial({
+      color: 0x8de4c4,
+      transparent: true,
+      opacity: SHAFT_OPACITY.solid,
+      depthWrite: false,
+    });
+    const shaftEdges = new THREE.LineBasicMaterial({
+      color: 0xd8fff0,
+      transparent: true,
+      opacity: SHAFT_OPACITY.edges,
+      depthWrite: false,
+    });
+    for (const shaft of building.features.elevators) {
+      const { solid, edges } = buildElevatorShaft(shaft, this.transform);
+      const column = new THREE.Mesh(solid, shaftSolid);
+      column.renderOrder = 100;
+      const wires = new THREE.LineSegments(edges, shaftEdges);
+      wires.renderOrder = 100;
+      this.structureGroup.add(column, wires);
+    }
+
     this.applyFloorAppearance();
 
     this.setCameraMode("orbit");
@@ -113,6 +146,8 @@ export class FloorMapViewer {
   /** Development aid: collapse every floor onto y=0 to eyeball registration. */
   setDebugStack(on: boolean): void {
     this.debugStack = on;
+    // A shaft spanning six storeys is meaningless once they all sit on y=0.
+    this.structureGroup.visible = !on;
     this.applyFloorAppearance();
   }
 
@@ -143,6 +178,7 @@ export class FloorMapViewer {
       floor.slabMaterial.opacity = tone.slab;
       floor.outlineMaterial.opacity = tone.outline;
       if (floor.voidEdgeMaterial) floor.voidEdgeMaterial.opacity = tone.voidEdge;
+      if (floor.coreMaterial) floor.coreMaterial.opacity = tone.core;
       floor.group.position.y = this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0);
     }
     this.needsRender = true;
