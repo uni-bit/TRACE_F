@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local working material (source PDFs, page renders) — not part of the app.
+    "tmp/**",
   ]),
 ]);
 
