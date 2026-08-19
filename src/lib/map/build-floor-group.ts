@@ -50,8 +50,11 @@ export function buildFloorGroup(
   const order = floor.level * 10;
   const voids = floor.features.voids;
 
+  // Frosted glass, not a tint: the slab is what says "there is floor here",
+  // so it has to survive being read through the stacked storeys above it.
   const slabMaterial = new THREE.MeshLambertMaterial({
-    color: 0x1e4038,
+    color: 0x2a6154,
+    emissive: 0x0d2a24,
     transparent: true,
     depthWrite: false,
   });
@@ -67,10 +70,9 @@ export function buildFloorGroup(
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
     toneMapped: false,
+    side: THREE.DoubleSide,
   });
-  const planGeometry = new THREE.PlaneGeometry(transform.width, transform.depth);
-  planGeometry.rotateX(-Math.PI / 2);
-  const plan = new THREE.Mesh(planGeometry, planMaterial);
+  const plan = new THREE.Mesh(buildPlanGeometry(footprint, voids, transform), planMaterial);
   plan.position.y = PLAN_LIFT;
   plan.renderOrder = order + 1;
   group.add(plan);
@@ -186,6 +188,44 @@ function buildSlabGeometry(
     );
   }
   const geometry = new THREE.ExtrudeGeometry(shape, { depth: SLAB_THICKNESS, bevelEnabled: false });
+  geometry.rotateX(Math.PI / 2);
+  return geometry;
+}
+
+/**
+ * The plan texture on a footprint-shaped sheet with the voids cut out — NOT a
+ * full-rect plane. If the ink kept drawing across the openings, the chain-line
+ * X symbols would float over the holes and a void would read as "floor with an
+ * X on it" while real floor reads as nothing: exactly backwards. Clipping the
+ * sheet makes a void truly empty and leaves the slab as the only "there is
+ * floor here" signal.
+ */
+function buildPlanGeometry(
+  footprint: [number, number][],
+  voids: VoidFeature[],
+  transform: PlanTransform,
+): THREE.BufferGeometry {
+  const shape = new THREE.Shape(
+    footprint.map(([nx, nz]) => new THREE.Vector2(toWorldX(nx, transform), toWorldZ(nz, transform))),
+  );
+  for (const { rect } of voids) {
+    shape.holes.push(
+      new THREE.Path(
+        rectRing(rect).map(([nx, nz]) => new THREE.Vector2(toWorldX(nx, transform), toWorldZ(nz, transform))),
+      ),
+    );
+  }
+  const geometry = new THREE.ShapeGeometry(shape);
+  // The shape lives in world XZ (pre-rotation XY); map vertices straight into
+  // the master-rect texture. v=1 is the image top row (three flips Y), which
+  // is plan north (-z), matching the old full-rect plane exactly.
+  const positions = geometry.getAttribute("position");
+  const uv = new Float32Array(positions.count * 2);
+  for (let i = 0; i < positions.count; i += 1) {
+    uv[i * 2] = positions.getX(i) / transform.width + 0.5;
+    uv[i * 2 + 1] = 0.5 - positions.getY(i) / transform.depth;
+  }
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
   geometry.rotateX(Math.PI / 2);
   return geometry;
 }

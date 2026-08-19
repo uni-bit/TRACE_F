@@ -12,12 +12,12 @@ import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transfor
 import type { BuildingDefinition, CameraMode } from "./types";
 
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1, core: 0.45, furniture: 0.15 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06, core: 0.04, furniture: 0.02 },
-  // furniture/slab sit higher in ALL than the dim math alone would suggest:
-  // the stacked view is where floor-vs-void has to read, and objects on the
-  // slab are that signal.
-  all: { plan: 0.65, wall: 0.4, slab: 0.24, outline: 0.35, voidEdge: 0.6, core: 0.25, furniture: 0.1 },
+  selected: { plan: 1, wall: 0.85, slab: 0.55, outline: 0.55, voidEdge: 1, core: 0.45, furniture: 0.15 },
+  dimmed: { plan: 0.06, wall: 0.05, slab: 0.08, outline: 0.05, voidEdge: 0.06, core: 0.04, furniture: 0.02 },
+  // slab/furniture sit high in ALL on purpose: the stacked view is where
+  // floor-vs-void has to read, and the frosted slab IS the floor signal —
+  // a void is wherever that frost is absent.
+  all: { plan: 0.65, wall: 0.4, slab: 0.4, outline: 0.35, voidEdge: 0.6, core: 0.25, furniture: 0.1 },
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
