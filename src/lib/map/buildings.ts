@@ -1,3 +1,4 @@
+import { loadFeatures } from "./features";
 import generated from "./toyosu-classroom.generated.json";
 import type { BuildingDefinition, BuildingFloor, FloorMeta, WallSegment } from "./types";
 
@@ -40,6 +41,13 @@ const classroomFloorMeta: FloorMeta[] = [
   },
 ];
 
+const features = loadFeatures(
+  generated.buildingId,
+  generated.plan,
+  generated.floors.map((floor) => floor.id),
+  Math.max(...generated.floors.map((floor) => floor.level)),
+);
+
 function buildFloors(): BuildingFloor[] {
   return generated.floors.map((floor) => {
     const meta = classroomFloorMeta.find((m) => m.id === floor.id);
@@ -51,6 +59,7 @@ function buildFloors(): BuildingFloor[] {
       level: floor.level,
       texture: floor.texture,
       walls: floor.walls.map(([x1, z1, x2, z2]): WallSegment => [x1, z1, x2, z2]),
+      features: features.byFloor[floor.id],
     };
   });
 }
@@ -62,6 +71,11 @@ export const toyosuClassroom: BuildingDefinition = {
   levelsLabel: "1–6F",
   plan: generated.plan,
   floors: buildFloors(),
+  features: features.building,
 };
+
+export function footprintFor(building: BuildingDefinition, floorId: string): [number, number][] {
+  return building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
+}
 
 export const buildings: BuildingDefinition[] = [toyosuClassroom];

@@ -26,3 +26,12 @@ export function toWorldX(nx: number, transform: PlanTransform): number {
 export function toWorldZ(nz: number, transform: PlanTransform): number {
   return nz * transform.depth;
 }
+
+/**
+ * Master-rect pixel coordinates (origin = crop top-left, +y = plan down) to
+ * normalized plan coordinates (±0.5). Hand-maintained feature annotations are
+ * written in pixels because they are measured directly on debug/crop-*.png.
+ */
+export function planPxToNormalized(px: number, py: number, plan: BuildingPlan): { nx: number; nz: number } {
+  return { nx: px / plan.widthPx - 0.5, nz: py / plan.heightPx - 0.5 };
+}

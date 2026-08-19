@@ -24,7 +24,70 @@ export interface FloorMeta {
   rooms: string[];
 }
 
-export type BuildingFloor = FloorMeta & FloorGeometry;
+/** Axis on the plan; +z = plan down (south), so "-z" is north. */
+export type PlanAxis = "+x" | "-x" | "+z" | "-z";
+
+/** Axis-aligned rect in normalized plan coordinates (±0.5). */
+export interface NormRect {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+}
+
+export type VoidKind = "atrium" | "escalator-well" | "stair-well";
+
+export interface VoidFeature {
+  rect: NormRect;
+  kind: VoidKind;
+}
+
+export interface StairFeature {
+  id: string;
+  rect: NormRect;
+  /** Direction of ascent, read from the tread hatching on the plan. */
+  up: PlanAxis;
+}
+
+export interface EscalatorFeature {
+  id: string;
+  rect: NormRect;
+  up: PlanAxis;
+  lanes: number;
+}
+
+/** A band of classrooms sharing an x-extent, partitioned along z. */
+export interface ClassroomRow {
+  x: [number, number];
+  rows: [number, number][];
+  /** Wall that carries the whiteboard (default "-z" = north). */
+  facing: PlanAxis;
+}
+
+export interface ElevatorShaft {
+  id: string;
+  rect: NormRect;
+  /** Inclusive floor-level span the shaft runs through. */
+  levels: [number, number];
+}
+
+export interface FloorFeatures {
+  voids: VoidFeature[];
+  stairs: StairFeature[];
+  escalators: EscalatorFeature[];
+  classrooms: ClassroomRow[];
+}
+
+export interface BuildingFeatures {
+  /** Slab outline per floor; floors without an override use `default`. */
+  footprints: { default: [number, number][]; byFloor: Record<string, [number, number][]> };
+  elevators: ElevatorShaft[];
+}
+
+export type BuildingFloor = FloorMeta &
+  FloorGeometry & {
+    features: FloorFeatures;
+  };
 
 export interface BuildingDefinition {
   id: string;
@@ -33,4 +96,5 @@ export interface BuildingDefinition {
   levelsLabel: string;
   plan: BuildingPlan;
   floors: BuildingFloor[];
+  features: BuildingFeatures;
 }
