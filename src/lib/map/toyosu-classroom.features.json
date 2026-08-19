@@ -36,7 +36,7 @@
     },
     "2": {
       "voids": [
-        { "rect": [486, 470, 645, 600], "kind": "atrium" },
+        { "rect": [486, 470, 643, 600], "kind": "atrium" },
         { "rect": [316, 1145, 388, 1360], "kind": "escalator-well" }
       ],
       "stairs": [

@@ -8,9 +8,10 @@ generated, so re-running the pipeline neither breaks nor fixes it.
 Usage:
     python scripts/floorplan/preview_features.py [--floor N]
 
-Pass criteria (docs/floor-map-3d.md §10.5): yellow on stair hatches, orange on
-escalator lanes, red on the chain-line X, blue on the EV box, green north edge
-on each classroom's top wall — all within ±5px.
+Pass criteria (docs/floor-map-3d.md §10.5): magenta wash covering exactly the
+floor's built area, yellow on stair hatches, orange on escalator lanes, red on
+the chain-line X, blue on the EV box, green north edge on each classroom's top
+wall — all within ±5px.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from pipeline.common import DEBUG_DIR, ROOT
 FEATURES_PATH = ROOT / "src" / "lib" / "map" / "toyosu-classroom.features.json"
 
 COLORS = {
-    "footprint": (255, 255, 255),
+    "footprint": (200, 40, 220),
     "void": (235, 60, 60),
     "stairs": (240, 210, 40),
     "escalator": (250, 140, 40),
@@ -66,7 +67,14 @@ def render_floor(floor_id: str, data: dict) -> None:
     draw = ImageDraw.Draw(overlay)
 
     footprint = data["footprints"].get(floor_id, data["footprints"]["default"])
-    draw.polygon([tuple(p) for p in footprint], outline=COLORS["footprint"] + (255,), width=3)
+    # Filled, not just stroked: a white hairline on white paper hides exactly the
+    # errors this tool exists to catch (missing wings, phantom notches).
+    draw.polygon(
+        [tuple(p) for p in footprint],
+        fill=COLORS["footprint"] + (36,),
+        outline=COLORS["footprint"] + (255,),
+        width=3,
+    )
 
     floor = data["floors"].get(floor_id, {})
 

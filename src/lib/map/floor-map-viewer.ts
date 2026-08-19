@@ -2,13 +2,14 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { buildFloorGroup, LEVEL_HEIGHT, type FloorHandle } from "./build-floor-group";
+import { footprintFor } from "./buildings";
 import { planTransform, type PlanTransform } from "./plan-transform";
 import type { BuildingDefinition, CameraMode } from "./types";
 
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.32 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06 },
-  all: { plan: 0.65, wall: 0.4, slab: 0.18 },
+  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1 },
+  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06 },
+  all: { plan: 0.65, wall: 0.4, slab: 0.18, outline: 0.35, voidEdge: 0.6 },
 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
@@ -65,7 +66,7 @@ export class FloorMapViewer {
     const loader = new THREE.TextureLoader();
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
     this.floors = building.floors.map((floor) => {
-      const handle = buildFloorGroup(floor, this.transform);
+      const handle = buildFloorGroup(floor, this.transform, footprintFor(building, floor.id));
       this.scene.add(handle.group);
       const texture = loader.load(floor.texture, () => {
         if (this.disposed) return;
@@ -122,7 +123,7 @@ export class FloorMapViewer {
     this.controls.dispose();
     for (const texture of this.textures) texture.dispose();
     this.scene.traverse((obj) => {
-      if (obj instanceof THREE.Mesh) {
+      if (obj instanceof THREE.Mesh || obj instanceof THREE.Line) {
         obj.geometry.dispose();
         const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
         for (const material of materials) material.dispose();
@@ -140,6 +141,8 @@ export class FloorMapViewer {
       floor.planMaterial.opacity = tone.plan;
       floor.wallMaterial.opacity = tone.wall;
       floor.slabMaterial.opacity = tone.slab;
+      floor.outlineMaterial.opacity = tone.outline;
+      if (floor.voidEdgeMaterial) floor.voidEdgeMaterial.opacity = tone.voidEdge;
       floor.group.position.y = this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0);
     }
     this.needsRender = true;
