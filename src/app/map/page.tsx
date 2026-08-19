@@ -1,5 +1,11 @@
-import { MapScreen } from "@/components/map-screen";
+import { Suspense } from "react";
+
+import { MapScreen } from "@/components/map/map-screen";
 
 export default function MapPage() {
-  return <MapScreen />;
+  return (
+    <Suspense>
+      <MapScreen />
+    </Suspense>
+  );
 }
