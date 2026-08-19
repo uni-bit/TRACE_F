@@ -24,6 +24,15 @@
 .DS_Store
 *.pem
 
+# local working material (source PDFs, page renders — not repo content)
+/tmp/
+
+# pnpm store (project uses npm)
+/.pnpm-store/
+
+# floorplan pipeline debug output
+/scripts/floorplan/debug/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
