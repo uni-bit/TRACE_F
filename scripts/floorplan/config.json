@@ -1,0 +1,66 @@
+{
+  "sourcePdf": "tmp/pdfs/campus-diary-2026-2.pdf",
+  "renderDir": "scripts/floorplan/debug/render",
+  "dpi": 600,
+  "pages": { "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64 },
+  "referenceFloor": "3",
+  "cyan": { "bMin": 131, "gMin": 81, "rMax": 119, "bOverR": 1.4 },
+  "templates": [
+    { "name": "bottom-stair", "x": 660, "y": 2560, "w": 260, "h": 180 },
+    { "name": "twin-stairs", "x": 920, "y": 1820, "w": 140, "h": 280 },
+    { "name": "top-stair", "x": 700, "y": 1450, "w": 180, "h": 120 }
+  ],
+  "refineWindow": { "x": 652, "y": 1400, "w": 468, "h": 1290 },
+  "masterRect": { "x": 632, "y": 1196, "w": 912, "h": 1514 },
+  "manualShiftOverride": {},
+  "eraserRects": {
+    "global": [],
+    "perFloor": {
+      "1": [
+        { "x": 0, "y": 170, "w": 220, "h": 105 },
+        { "x": 0, "y": 430, "w": 70, "h": 370 },
+        { "x": 490, "y": 728, "w": 422, "h": 152 },
+        { "x": 730, "y": 918, "w": 182, "h": 88 },
+        { "x": 780, "y": 1028, "w": 132, "h": 84 },
+        { "x": 850, "y": 1278, "w": 62, "h": 236 }
+      ],
+      "2": [
+        { "x": 498, "y": 390, "w": 24, "h": 696 },
+        { "x": 540, "y": 833, "w": 300, "h": 78 },
+        { "x": 770, "y": 938, "w": 142, "h": 72 },
+        { "x": 490, "y": 1078, "w": 422, "h": 80 }
+      ],
+      "4": [
+        { "x": 700, "y": 712, "w": 160, "h": 118 }
+      ],
+      "5": [
+        { "x": 490, "y": 1090, "w": 422, "h": 310 },
+        { "x": 758, "y": 713, "w": 154, "h": 157 }
+      ],
+      "6": [
+        { "x": 0, "y": 430, "w": 32, "h": 480 },
+        { "x": 525, "y": 873, "w": 387, "h": 87 },
+        { "x": 536, "y": 472, "w": 20, "h": 403 },
+        { "x": 520, "y": 968, "w": 392, "h": 112 },
+        { "x": 532, "y": 1108, "w": 380, "h": 78 },
+        { "x": 532, "y": 1186, "w": 380, "h": 72 },
+        { "x": 758, "y": 713, "w": 154, "h": 140 }
+      ]
+    }
+  },
+  "walls": {
+    "minComponentSide": 60,
+    "minComponentArea": 900,
+    "closeGapPx": 12,
+    "minRunPx": 50,
+    "mergeParallelPx": 4,
+    "minSegmentFrac": 0.02
+  },
+  "texture": { "quantizeColors": 32 },
+  "output": {
+    "textureDir": "public/floorplans/classroom",
+    "texturePattern": "floor-{floor}.png",
+    "geometryJson": "src/lib/map/toyosu-classroom.generated.json",
+    "buildingId": "toyosu-classroom"
+  }
+}
