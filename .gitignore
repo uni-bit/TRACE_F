@@ -32,6 +32,7 @@
 
 # floorplan pipeline debug output
 /scripts/floorplan/debug/
+__pycache__/
 
 # debug
 npm-debug.log*
