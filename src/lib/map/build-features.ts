@@ -2,13 +2,29 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { LEVEL_HEIGHT, toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
-import type { ElevatorShaft, FloorFeatures, NormRect, PlanAxis } from "./types";
+import type { ClassroomRow, ElevatorShaft, FloorFeatures, NormRect, PlanAxis } from "./types";
 
 /** The plan hatching only ever draws one flight, so we only build one (§12.1). */
 const STEPS = 12;
 const ESCALATOR_DECK = 0.02;
 const ESCALATOR_RAIL_HEIGHT = 0.05;
 const ESCALATOR_RAIL_THICKNESS = 0.012;
+
+const WHITEBOARD_SPAN = 0.6;
+const WHITEBOARD_HEIGHT = 0.12;
+const WHITEBOARD_THICKNESS = 0.012;
+const WHITEBOARD_BASE = 0.06;
+/** Clear of the wall it hangs on. */
+const WHITEBOARD_INSET = 0.05;
+
+const DESK_MARGIN = 0.15;
+const DESK_PITCH_X = 0.145;
+const DESK_PITCH_Z = 0.105;
+const DESK_SIZE_X = 0.09;
+const DESK_SIZE_Z = 0.05;
+const DESK_HEIGHT = 0.035;
+const DESK_MAX_COLS = 8;
+const DESK_MAX_ROWS = 10;
 
 interface WorldRect {
   x0: number;
@@ -26,9 +42,9 @@ function toWorldRect(rect: NormRect, transform: PlanTransform): WorldRect {
   };
 }
 
-const RUNS_ALONG_X = (up: PlanAxis) => up === "+x" || up === "-x";
-/** True when the axis points at the far (max) end of the rect. */
-const ASCENDS_TOWARD_MAX = (up: PlanAxis) => up === "+x" || up === "+z";
+/** The rect axis a PlanAxis refers to, and which end of it the axis points at. */
+const IS_X_AXIS = (axis: PlanAxis) => axis === "+x" || axis === "-x";
+const POINTS_AT_MAX = (axis: PlanAxis) => axis === "+x" || axis === "+z";
 
 /**
  * Stairs and escalators for one floor, merged into a single BufferGeometry so a
@@ -61,14 +77,14 @@ export function buildCoreGeometry(
  * from this floor's slab to the one above.
  */
 function stairSteps(rect: WorldRect, up: PlanAxis): THREE.BufferGeometry[] {
-  const alongX = RUNS_ALONG_X(up);
+  const alongX = IS_X_AXIS(up);
   const spanX = rect.x1 - rect.x0;
   const spanZ = rect.z1 - rect.z0;
   const tread = (alongX ? spanX : spanZ) / STEPS;
   const boxes: THREE.BufferGeometry[] = [];
   for (let i = 0; i < STEPS; i += 1) {
     const height = ((i + 1) * LEVEL_HEIGHT) / STEPS;
-    const slot = ASCENDS_TOWARD_MAX(up) ? i : STEPS - 1 - i;
+    const slot = POINTS_AT_MAX(up) ? i : STEPS - 1 - i;
     const box = new THREE.BoxGeometry(
       alongX ? tread : spanX,
       height,
@@ -93,7 +109,7 @@ function stairSteps(rect: WorldRect, up: PlanAxis): THREE.BufferGeometry[] {
  * — this is a guide, not a survey (§18).
  */
 function escalatorLanes(rect: WorldRect, up: PlanAxis, lanes: number): THREE.BufferGeometry[] {
-  const alongX = RUNS_ALONG_X(up);
+  const alongX = IS_X_AXIS(up);
   const run = alongX ? rect.x1 - rect.x0 : rect.z1 - rect.z0;
   const acrossSpan = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
   const acrossStart = alongX ? rect.z0 : rect.x0;
@@ -104,7 +120,7 @@ function escalatorLanes(rect: WorldRect, up: PlanAxis, lanes: number): THREE.Buf
   // spans exactly one storey and lands on [0, LEVEL_HEIGHT] after the lift.
   const length = Math.hypot(run, LEVEL_HEIGHT);
   const pitch = Math.atan2(LEVEL_HEIGHT, run);
-  const towardMax = ASCENDS_TOWARD_MAX(up);
+  const towardMax = POINTS_AT_MAX(up);
   // rotateZ(+p) raises the +x end; rotateX(+p) lowers the +z end.
   const tilt = alongX ? (towardMax ? pitch : -pitch) : (towardMax ? -pitch : pitch);
 
@@ -164,4 +180,74 @@ export function buildElevatorShaft(
   edges.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
 
   return { solid, edges };
+}
+
+/**
+ * Desks and whiteboards for every classroom on a floor, merged into one
+ * geometry. This is schematic furniture, not a seating plan: the point is to
+ * give the rooms a sense of scale (§13, and the inspector copy says so).
+ */
+export function buildFurnitureGeometry(
+  classrooms: ClassroomRow[],
+  transform: PlanTransform,
+): THREE.BufferGeometry | null {
+  const parts: THREE.BufferGeometry[] = [];
+  for (const band of classrooms) {
+    for (const [z0, z1] of band.rows) {
+      const room = toWorldRect({ x0: band.x[0], x1: band.x[1], z0, z1 }, transform);
+      parts.push(whiteboard(room, band.facing), ...desks(room));
+    }
+  }
+  if (parts.length === 0) return null;
+  const merged = mergeGeometries(parts);
+  for (const part of parts) part.dispose();
+  return merged;
+}
+
+function whiteboard(room: WorldRect, facing: PlanAxis): THREE.BufferGeometry {
+  const onX = IS_X_AXIS(facing);
+  const span = (onX ? room.z1 - room.z0 : room.x1 - room.x0) * WHITEBOARD_SPAN;
+  const board = new THREE.BoxGeometry(
+    onX ? WHITEBOARD_THICKNESS : span,
+    WHITEBOARD_HEIGHT,
+    onX ? span : WHITEBOARD_THICKNESS,
+  );
+  const inset = POINTS_AT_MAX(facing) ? -WHITEBOARD_INSET : WHITEBOARD_INSET;
+  const wall = POINTS_AT_MAX(facing)
+    ? (onX ? room.x1 : room.z1)
+    : (onX ? room.x0 : room.z0);
+  board.translate(
+    onX ? wall + inset : (room.x0 + room.x1) / 2,
+    WHITEBOARD_BASE + WHITEBOARD_HEIGHT / 2,
+    onX ? (room.z0 + room.z1) / 2 : wall + inset,
+  );
+  return board;
+}
+
+/**
+ * Grid derived from the room's own size, so adding a classroom to the
+ * annotation never means writing a desk count. The clamps keep a large hall
+ * from exploding into hundreds of boxes.
+ */
+function desks(room: WorldRect): THREE.BufferGeometry[] {
+  const usableX = (room.x1 - room.x0) * (1 - 2 * DESK_MARGIN);
+  const usableZ = (room.z1 - room.z0) * (1 - 2 * DESK_MARGIN);
+  const cols = Math.min(Math.max(Math.floor(usableX / DESK_PITCH_X), 1), DESK_MAX_COLS);
+  const rows = Math.min(Math.max(Math.floor(usableZ / DESK_PITCH_Z), 1), DESK_MAX_ROWS);
+  const originX = (room.x0 + room.x1) / 2 - (cols * DESK_PITCH_X) / 2;
+  const originZ = (room.z0 + room.z1) / 2 - (rows * DESK_PITCH_Z) / 2;
+
+  const boxes: THREE.BufferGeometry[] = [];
+  for (let c = 0; c < cols; c += 1) {
+    for (let r = 0; r < rows; r += 1) {
+      const desk = new THREE.BoxGeometry(DESK_SIZE_X, DESK_HEIGHT, DESK_SIZE_Z);
+      desk.translate(
+        originX + DESK_PITCH_X * (c + 0.5),
+        DESK_HEIGHT / 2,
+        originZ + DESK_PITCH_Z * (r + 0.5),
+      );
+      boxes.push(desk);
+    }
+  }
+  return boxes;
 }

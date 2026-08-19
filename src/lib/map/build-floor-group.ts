@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
-import { buildCoreGeometry } from "./build-features";
+import { buildCoreGeometry, buildFurnitureGeometry } from "./build-features";
 import { LEVEL_HEIGHT, toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
 import type { BuildingFloor, NormRect, VoidFeature } from "./types";
 
@@ -25,6 +25,8 @@ export interface FloorHandle {
   voidEdgeMaterial: THREE.LineBasicMaterial | null;
   /** Null on the top floor, whose stairs and escalators lead nowhere. */
   coreMaterial: THREE.MeshLambertMaterial | null;
+  /** Null on floors with no classrooms (1F, 2F). */
+  furnitureMaterial: THREE.MeshLambertMaterial | null;
 }
 
 /**
@@ -98,6 +100,21 @@ export function buildFloorGroup(
     group.add(cores);
   }
 
+  // Deliberately a separate material from the cores: the furniture is invented
+  // and has to be able to fade out well below anything traced from the plan.
+  let furnitureMaterial: THREE.MeshLambertMaterial | null = null;
+  const furnitureGeometry = buildFurnitureGeometry(floor.features.classrooms, transform);
+  if (furnitureGeometry) {
+    furnitureMaterial = new THREE.MeshLambertMaterial({
+      color: 0x9fd8c6,
+      transparent: true,
+      depthWrite: false,
+    });
+    const furniture = new THREE.Mesh(furnitureGeometry, furnitureMaterial);
+    furniture.renderOrder = order + 3;
+    group.add(furniture);
+  }
+
   const outlineMaterial = new THREE.LineBasicMaterial({
     color: 0x8de4c4,
     transparent: true,
@@ -133,6 +150,7 @@ export function buildFloorGroup(
     outlineMaterial,
     voidEdgeMaterial,
     coreMaterial,
+    furnitureMaterial,
   };
 }
 

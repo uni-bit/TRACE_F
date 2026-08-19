@@ -8,9 +8,9 @@ import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transfor
 import type { BuildingDefinition, CameraMode } from "./types";
 
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1, core: 0.45 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06, core: 0.04 },
-  all: { plan: 0.65, wall: 0.4, slab: 0.18, outline: 0.35, voidEdge: 0.6, core: 0.25 },
+  selected: { plan: 1, wall: 0.85, slab: 0.32, outline: 0.55, voidEdge: 1, core: 0.45, furniture: 0.15 },
+  dimmed: { plan: 0.06, wall: 0.05, slab: 0.06, outline: 0.05, voidEdge: 0.06, core: 0.04, furniture: 0.02 },
+  all: { plan: 0.65, wall: 0.4, slab: 0.18, outline: 0.35, voidEdge: 0.6, core: 0.25, furniture: 0.06 },
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
@@ -179,6 +179,7 @@ export class FloorMapViewer {
       floor.outlineMaterial.opacity = tone.outline;
       if (floor.voidEdgeMaterial) floor.voidEdgeMaterial.opacity = tone.voidEdge;
       if (floor.coreMaterial) floor.coreMaterial.opacity = tone.core;
+      if (floor.furnitureMaterial) floor.furnitureMaterial.opacity = tone.furniture;
       floor.group.position.y = this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0);
     }
     this.needsRender = true;
