@@ -27,13 +27,14 @@ def _blueprint_rgba(rgb: np.ndarray, params: dict) -> np.ndarray:
 
 
 def _fit_texture(img: Image.Image, params: dict) -> Image.Image:
-    """Cap GPU dimensions while preserving the registered plan aspect ratio."""
-    max_side = params.get("maxSidePx")
-    if not max_side or max(img.size) <= max_side:
+    """Apply one shared master-pixel scale so every building has equal density."""
+    scale = params.get("texelsPerMasterPx", 1.0)
+    if scale <= 0:
+        raise ValueError("texture.texelsPerMasterPx must be greater than zero")
+    if scale == 1:
         return img
-    resized = img.copy()
-    resized.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
-    return resized
+    size = tuple(max(1, int(dimension * scale + 0.5)) for dimension in img.size)
+    return img.resize(size, Image.Resampling.LANCZOS)
 
 
 def emit(

@@ -12,7 +12,7 @@
     "mergeParallelPx": 4,
     "minSegmentFrac": 0.02
   },
-  "texture": { "alphaGain": 2.2, "inkLighten": 0.55, "maxSidePx": 768 },
+  "texture": { "alphaGain": 2.2, "inkLighten": 0.55, "texelsPerMasterPx": 0.5 },
   "buildings": [
     {
       "id": "toyosu-classroom",

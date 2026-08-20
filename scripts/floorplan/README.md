@@ -44,7 +44,7 @@ python scripts/floorplan/build.py --debug
    1本の中心線セグメントへ。マスター矩形基準で±0.5に正規化
 5. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
    ジオメトリ JSON を出力(完全再現可能)。元の600dpi座標はジオメトリ用に保持しつつ、
-   GPUへ展開するテクスチャだけ `texture.maxSidePx` を上限に縮小する
+   GPUへ展開する全棟のテクスチャを `texture.texelsPerMasterPx` の共通比率で縮小する
 
 新しい棟を初回生成するときは、縦動線アノテーションがまだ無いため図面記号が
 仮の壁として残る。`stairs` / `escalators` を実測して `featuresJson` に追加した後、
