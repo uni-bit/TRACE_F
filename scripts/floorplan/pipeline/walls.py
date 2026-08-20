@@ -9,11 +9,13 @@ yields exactly one segment instead of one per pixel row.
 
 from __future__ import annotations
 
+import json
+
 import cv2
 import numpy as np
 from PIL import Image
 
-from .common import DEBUG_DIR, cyan_mask
+from .common import DEBUG_DIR, ROOT, cyan_mask
 
 Segment = tuple[float, float, float, float]  # x1, z1, x2, z2 normalized to ±0.5
 
@@ -23,9 +25,15 @@ def extract_walls(config: dict, crops: dict[str, np.ndarray], debug: bool = Fals
     rect = config["masterRect"]
     min_seg_px = int(rect["w"] * params["minSegmentFrac"])
     results: dict[str, list[Segment]] = {}
+    symbol_rects = _load_symbol_rects(config)
     print("  wall extraction")
     for floor, crop in crops.items():
         mask = cyan_mask(crop, config["cyan"]).astype(np.uint8)
+        for x0, y0, x1, y1, inset in symbol_rects.get(floor, []):
+            mask[
+                max(y0 + inset, 0) : min(y1 - inset, mask.shape[0]),
+                max(x0 + inset, 0) : min(x1 - inset, mask.shape[1]),
+            ] = 0
         cleaned = _remove_small_components(mask, params)
         segments: list[tuple[int, int, int, int]] = []
         for horizontal in (True, False):
@@ -37,6 +45,36 @@ def extract_walls(config: dict, crops: dict[str, np.ndarray], debug: bool = Fals
         if debug:
             _write_overlay(floor, crop, segments)
     return results
+
+
+def _load_symbol_rects(config: dict) -> dict[str, list[tuple[int, int, int, int, int]]]:
+    """Plan symbols are annotations, never wall centerlines.
+
+    A floor also displays the escalator arriving from the level below, so its
+    rectangle is excluded alongside that floor's own stairs and escalators.
+    """
+    with open(ROOT / config["featuresJson"], encoding="utf-8") as handle:
+        features = json.load(handle)["floors"]
+    result: dict[str, list[tuple[int, int, int, int, int]]] = {}
+    ordered = sorted(features, key=int)
+    for index, floor in enumerate(ordered):
+        current = features[floor]
+        # Stair treads are shorter than the wall-run threshold and disappear in
+        # the normal morphology. Erasing their broad annotation boxes would
+        # split real enclosure walls, so only the long-run escalator symbols
+        # need an explicit mask at this stage.
+        entries = [(entry, 0) for entry in current.get("escalators", [])]
+        entries += [
+            (entry, -8)
+            for entry in current.get("voids", [])
+            if entry.get("kind") == "escalator-well"
+        ]
+        if index > 0:
+            entries += [(entry, 0) for entry in features[ordered[index - 1]].get("escalators", [])]
+        result[floor] = [
+            (*tuple(int(value) for value in entry["rect"]), inset) for entry, inset in entries
+        ]
+    return result
 
 
 def _remove_small_components(mask: np.ndarray, params: dict) -> np.ndarray:

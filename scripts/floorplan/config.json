@@ -4,6 +4,7 @@
   "dpi": 600,
   "pages": { "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64 },
   "referenceFloor": "3",
+  "featuresJson": "src/lib/map/toyosu-classroom.features.json",
   "cyan": { "bMin": 131, "gMin": 81, "rMax": 119, "bOverR": 1.4 },
   "templates": [
     { "name": "bottom-stair", "x": 660, "y": 2560, "w": 260, "h": 180 },
