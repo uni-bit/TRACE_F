@@ -23,7 +23,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from .common import DEBUG_DIR, cyan_mask, phase_correlate
+from .common import building_debug_dir, cyan_mask, phase_correlate
 
 Image.MAX_IMAGE_PIXELS = None
 
@@ -168,16 +168,12 @@ def _masked_match(tgt: np.ndarray, tpl: np.ndarray) -> np.ndarray:
 def _write_overlay(config, masks, shifts) -> None:
     """Stack all aligned floor masks (master rect region) into one color-coded image."""
     rect = config["masterRect"]
-    colors = {
-        "1": (255, 80, 80),
-        "2": (255, 170, 40),
-        "3": (80, 220, 80),
-        "4": (60, 170, 255),
-        "5": (190, 110, 255),
-        "6": (255, 230, 60),
-    }
+    colors = [
+        (255, 80, 80), (255, 170, 40), (80, 220, 80), (60, 170, 255),
+        (190, 110, 255), (255, 230, 60), (80, 230, 220), (255, 110, 190),
+    ]
     canvas = np.zeros((rect["h"], rect["w"], 3), dtype=np.float32)
-    for floor, mask in masks.items():
+    for index, (floor, mask) in enumerate(masks.items()):
         dx, dy = shifts[floor]
         x, y = rect["x"] + dx, rect["y"] + dy
         win = np.zeros((rect["h"], rect["w"]), dtype=bool)
@@ -186,8 +182,9 @@ def _write_overlay(config, masks, shifts) -> None:
         y1 = min(y + rect["h"], mask.shape[0])
         if x1 > x0 and y1 > y0:
             win[y0 - y : y1 - y, x0 - x : x1 - x] = mask[y0:y1, x0:x1]
-        canvas[win] += np.array(colors[floor], dtype=np.float32) * 0.45
+        canvas[win] += np.array(colors[index % len(colors)], dtype=np.float32) * 0.45
     out = np.clip(canvas, 0, 255).astype(np.uint8)
-    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(out).save(DEBUG_DIR / "overlay-registration.png")
-    print(f"    wrote {DEBUG_DIR / 'overlay-registration.png'}")
+    debug_dir = building_debug_dir(config)
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(out).save(debug_dir / "overlay-registration.png")
+    print(f"    wrote {debug_dir / 'overlay-registration.png'}")

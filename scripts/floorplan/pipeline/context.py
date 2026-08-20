@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from .common import DEBUG_DIR, ROOT, cyan_mask
+from .common import ROOT, building_debug_dir, cyan_mask
 
 
 def _load_mapping(config: dict) -> dict:
@@ -101,6 +101,7 @@ def trace_context(config: dict, crop: np.ndarray, debug: bool = False) -> dict:
     print(f"    {output.relative_to(ROOT)} ({len(neighbors)} surrounding buildings)")
 
     if debug:
-        DEBUG_DIR.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(mask).save(DEBUG_DIR / "context-mask.png")
+        debug_dir = building_debug_dir(config)
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(mask).save(debug_dir / "context-mask.png")
     return generated

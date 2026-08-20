@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from .common import DEBUG_DIR, ROOT, cyan_mask
+from .common import ROOT, building_debug_dir, cyan_mask
 
 Segment = tuple[float, float, float, float]  # x1, z1, x2, z2 normalized to ±0.5
 
@@ -43,7 +43,7 @@ def extract_walls(config: dict, crops: dict[str, np.ndarray], debug: bool = Fals
         h_count = sum(1 for s in segments if s[3] == s[1])
         print(f"    {floor}F: {len(segments)} segments ({h_count} horizontal, {len(segments) - h_count} vertical)")
         if debug:
-            _write_overlay(floor, crop, segments)
+            _write_overlay(config, floor, crop, segments)
     return results
 
 
@@ -161,9 +161,10 @@ def _normalize(seg: tuple[int, int, int, int], rect: dict) -> Segment:
     )
 
 
-def _write_overlay(floor: str, crop: np.ndarray, segments: list[tuple[int, int, int, int]]) -> None:
+def _write_overlay(config: dict, floor: str, crop: np.ndarray, segments: list[tuple[int, int, int, int]]) -> None:
     canvas = crop.copy()
     for x1, y1, x2, y2 in segments:
         cv2.line(canvas, (x1, y1), (x2, y2), (230, 40, 40), thickness=3)
-    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(canvas).save(DEBUG_DIR / f"walls-over-texture-{floor}.png")
+    debug_dir = building_debug_dir(config)
+    debug_dir.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(canvas).save(debug_dir / f"walls-over-texture-{floor}.png")

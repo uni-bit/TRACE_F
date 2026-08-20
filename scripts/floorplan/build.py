@@ -1,11 +1,10 @@
-"""Floorplan asset pipeline for the Toyosu classroom building 3D map.
+"""Multi-building floorplan asset pipeline for the Toyosu campus 3D map.
 
-Regenerates everything under public/floorplans/classroom/ and the geometry
-JSON in src/lib/map/ from the campus diary PDF. See README.md in this
-directory for inputs and usage.
+Regenerates every building listed in config.json from the campus diary PDF.
+See README.md in this directory for inputs and usage.
 
 Usage:
-    python scripts/floorplan/build.py [--debug] [--stage render|register|crop|walls|emit]
+    python scripts/floorplan/build.py [--debug] [--stage render|register|crop|context|walls|emit]
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from pipeline.common import load_config
+from pipeline.common import building_config, load_config
 from pipeline.context import trace_context
 from pipeline.crop import crop_floors
 from pipeline.emit import emit
@@ -36,32 +35,40 @@ def main() -> None:
 
     config = load_config()
 
-    print("render")
-    paths = render_pages(config)
-    if last < 1:
-        return
+    source_hash = source_sha256(config)
+    primary_id = config["buildings"][0]["id"]
+    for building in config["buildings"]:
+        scoped = building_config(config, building)
+        print(f'[{building["id"]}] render')
+        paths = render_pages(scoped)
+        if last < 1:
+            continue
 
-    print("register")
-    pages = {floor: load_page(path) for floor, path in paths.items()}
-    shifts = register_floors(config, pages, debug=args.debug)
-    if last < 2:
-        return
+        print(f'[{building["id"]}] register')
+        pages = {floor: load_page(path) for floor, path in paths.items()}
+        shifts = register_floors(scoped, pages, debug=args.debug)
+        if last < 2:
+            continue
 
-    print("crop")
-    crops, context_crop = crop_floors(config, pages, shifts, debug=args.debug)
-    if last < 3:
-        return
+        print(f'[{building["id"]}] crop')
+        include_context = building["id"] == primary_id and "contextRect" in scoped
+        crops, context_crop = crop_floors(
+            scoped, pages, shifts, debug=args.debug, include_context=include_context
+        )
+        if last < 3:
+            continue
 
-    print("context")
-    trace_context(config, context_crop, debug=args.debug)
-    if last < 4:
-        return
+        if context_crop is not None:
+            print(f'[{building["id"]}] context')
+            trace_context(scoped, context_crop, debug=args.debug)
+        if last < 4:
+            continue
 
-    walls = extract_walls(config, crops, debug=args.debug)
-    if last < 5:
-        return
+        walls = extract_walls(scoped, crops, debug=args.debug)
+        if last < 5:
+            continue
 
-    emit(config, crops, walls, shifts, source_sha256(config))
+        emit(scoped, crops, walls, shifts, source_hash)
 
 
 if __name__ == "__main__":

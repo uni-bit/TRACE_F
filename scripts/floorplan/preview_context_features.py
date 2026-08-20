@@ -15,7 +15,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
-DEBUG_DIR = ROOT / "scripts" / "floorplan" / "debug"
+DEBUG_DIR = ROOT / "scripts" / "floorplan" / "debug" / "toyosu-classroom"
 FEATURES_PATH = ROOT / "src" / "lib" / "map" / "toyosu-context.features.json"
 GENERATED_PATH = ROOT / "src" / "lib" / "map" / "toyosu-context.generated.json"
 COLORS = [(226, 116, 255), (255, 156, 84), (88, 214, 181), (255, 214, 92)]

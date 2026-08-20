@@ -17,6 +17,18 @@ def load_config() -> dict:
         return json.load(f)
 
 
+def building_config(config: dict, building: dict) -> dict:
+    """Overlay one building's registration/output settings on shared params."""
+    scoped = {key: value for key, value in config.items() if key != "buildings"}
+    scoped.update(building)
+    scoped["output"] = {**building["output"], "buildingId": building["id"]}
+    return scoped
+
+
+def building_debug_dir(config: dict) -> Path:
+    return DEBUG_DIR / config["id"]
+
+
 def cyan_mask(rgb: np.ndarray, params: dict) -> np.ndarray:
     """Boolean mask of the cyan drawing ink used by the campus diary floor plans."""
     r = rgb[..., 0].astype(np.float32)

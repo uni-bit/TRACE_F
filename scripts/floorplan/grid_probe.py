@@ -5,9 +5,9 @@ master-rect pixels, read off debug/crop-{floor}.png by eye. Eyeballing is how
 the 4F atrium ended up 80px too tall, so measure with this instead: it blows a
 region up and rules a labelled 25px grid over it.
 
-    python scripts/floorplan/grid_probe.py 4 300 640 500 1290 2
+    python scripts/floorplan/grid_probe.py toyosu-classroom 4 300 640 500 1290 2
 
-writes debug/grid-4.png. Read the four edges of the symbol straight off the
+writes debug/toyosu-classroom/grid-4.png. Read the four edges of the symbol straight off the
 labels, and take the *centre* of a wall line, not its outer face.
 """
 
@@ -22,14 +22,15 @@ GRID_PX = 25
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) not in (6, 7):
+    if len(argv) not in (7, 8):
         print(__doc__)
         return 2
-    floor = argv[1]
-    x0, y0, x1, y1 = (int(v) for v in argv[2:6])
-    scale = int(argv[6]) if len(argv) == 7 else 2
+    building, floor = argv[1:3]
+    x0, y0, x1, y1 = (int(v) for v in argv[3:7])
+    scale = int(argv[7]) if len(argv) == 8 else 2
+    debug_dir = DEBUG / building
 
-    crop = Image.open(DEBUG / f"crop-{floor}.png").convert("RGB")
+    crop = Image.open(debug_dir / f"crop-{floor}.png").convert("RGB")
     img = crop.crop((x0, y0, x1, y1)).resize(((x1 - x0) * scale, (y1 - y0) * scale), Image.LANCZOS)
     draw = ImageDraw.Draw(img)
 
@@ -46,7 +47,7 @@ def main(argv: list[str]) -> int:
         draw.line([(0, y), (img.width, y)], fill=(120, 160, 255), width=1)
         draw.text((2, y + 2), str(py), fill=(0, 0, 200))
 
-    out = DEBUG / f"grid-{floor}.png"
+    out = debug_dir / f"grid-{floor}.png"
     img.save(out)
     print(f"wrote {out} ({img.width}x{img.height})")
     return 0

@@ -1,12 +1,12 @@
 """Overlay the hand-maintained feature annotations onto the cropped floor plans.
 
-Renders src/lib/map/toyosu-classroom.features.json (master-rect pixels) on top
-of debug/crop-{floor}.png so annotation drift is caught in 2D before anything
+Renders a building's features JSON (master-rect pixels) on top of its
+debug/{building}/crop-{floor}.png so annotation drift is caught in 2D before anything
 reaches the 3D viewer. Not a build.py stage: features.json is hand-edited, not
 generated, so re-running the pipeline neither breaks nor fixes it.
 
 Usage:
-    python scripts/floorplan/preview_features.py [--floor N]
+    python scripts/floorplan/preview_features.py [--building ID] [--floor N]
 
 Pass criteria (docs/floor-map-3d.md §10.5): magenta wash covering exactly the
 floor's built area, yellow on stair hatches, orange on escalator lanes, red on
@@ -24,9 +24,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pipeline.common import DEBUG_DIR, ROOT
-
-FEATURES_PATH = ROOT / "src" / "lib" / "map" / "toyosu-classroom.features.json"
+from pipeline.common import ROOT, building_config, building_debug_dir, load_config
 
 COLORS = {
     "footprint": (200, 40, 220),
@@ -58,8 +56,8 @@ def draw_arrow(draw: ImageDraw.ImageDraw, rect: list[int], axis: str, color) -> 
     )
 
 
-def render_floor(floor_id: str, data: dict) -> None:
-    crop_path = DEBUG_DIR / f"crop-{floor_id}.png"
+def render_floor(floor_id: str, data: dict, debug_dir: Path) -> None:
+    crop_path = debug_dir / f"crop-{floor_id}.png"
     if not crop_path.exists():
         print(f"  {floor_id}F: {crop_path} not found — run build.py --debug first")
         return
@@ -130,22 +128,33 @@ def render_floor(floor_id: str, data: dict) -> None:
             draw.rectangle(ev["rect"], fill=COLORS["elevator"] + (70,), outline=COLORS["elevator"] + (255,), width=3)
 
     out = Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
-    out_path = DEBUG_DIR / f"features-{floor_id}.png"
+    out_path = debug_dir / f"features-{floor_id}.png"
     out.save(out_path)
     print(f"  wrote {out_path.relative_to(ROOT)}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--floor", help="render a single floor (1..6); default all")
+    parser.add_argument("--building", help="building id; defaults to the first configured building")
+    parser.add_argument("--floor", help="render a single floor; default all annotated floors")
     args = parser.parse_args()
 
-    with open(FEATURES_PATH, encoding="utf-8") as f:
+    config = load_config()
+    building = next(
+        (item for item in config["buildings"] if item["id"] == args.building),
+        config["buildings"][0] if args.building is None else None,
+    )
+    if building is None:
+        parser.error(f"unknown building: {args.building}")
+    scoped = building_config(config, building)
+    features_path = ROOT / scoped["featuresJson"]
+    debug_dir = building_debug_dir(scoped)
+    with open(features_path, encoding="utf-8") as f:
         data = json.load(f)
 
     floors = [args.floor] if args.floor else sorted(data["floors"].keys(), key=int)
     for floor_id in floors:
-        render_floor(floor_id, data)
+        render_floor(floor_id, data, debug_dir)
 
 
 if __name__ == "__main__":
