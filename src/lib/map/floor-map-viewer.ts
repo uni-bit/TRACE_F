@@ -11,13 +11,13 @@ import { footprintFor } from "./buildings";
 import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
 import type { BuildingDefinition, CameraMode } from "./types";
 
+// The slab tracks the walls one notch below them everywhere: the floor has to
+// read as a solid object (a void is where that object stops), while the walls
+// stay the strongest thing standing on it.
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.55, outline: 0.55, voidEdge: 1, core: 0.45, furniture: 0.15 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.08, outline: 0.05, voidEdge: 0.06, core: 0.04, furniture: 0.02 },
-  // slab/furniture sit high in ALL on purpose: the stacked view is where
-  // floor-vs-void has to read, and the frosted slab IS the floor signal —
-  // a void is wherever that frost is absent.
-  all: { plan: 0.65, wall: 0.4, slab: 0.4, outline: 0.35, voidEdge: 0.6, core: 0.25, furniture: 0.1 },
+  selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.45, furniture: 0.15 },
+  dimmed: { plan: 0.06, wall: 0.05, slab: 0.04, outline: 0.05, core: 0.04, furniture: 0.02 },
+  all: { plan: 0.65, wall: 0.4, slab: 0.34, outline: 0.35, core: 0.25, furniture: 0.1 },
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
@@ -53,7 +53,6 @@ type FloorTone = {
   wall: number;
   slab: number;
   outline: number;
-  voidEdge: number;
   core: number;
   furniture: number;
   lift: number;
@@ -64,7 +63,6 @@ const TONE_KEYS: (keyof FloorTone)[] = [
   "wall",
   "slab",
   "outline",
-  "voidEdge",
   "core",
   "furniture",
   "lift",
@@ -365,7 +363,6 @@ export class FloorMapViewer {
       floor.wallMaterial.opacity = tone.wall;
       floor.slabMaterial.opacity = tone.slab;
       floor.outlineMaterial.opacity = tone.outline;
-      if (floor.voidEdgeMaterial) floor.voidEdgeMaterial.opacity = tone.voidEdge;
       if (floor.coreMaterial) floor.coreMaterial.opacity = tone.core;
       if (floor.furnitureMaterial) floor.furnitureMaterial.opacity = tone.furniture;
       floor.group.position.y = tone.lift;

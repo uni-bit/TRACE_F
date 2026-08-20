@@ -9,7 +9,7 @@ export const WALL_HEIGHT = 0.3;
 const SLAB_THICKNESS = 0.03;
 const WALL_THICKNESS = 0.045;
 const PLAN_LIFT = 0.004;
-/** Outline / void rims sit between the slab top (y=0) and the plan texture. */
+/** The footprint outline sits between the slab top (y=0) and the plan texture. */
 const EDGE_LIFT = 0.002;
 
 export interface FloorHandle {
@@ -21,8 +21,6 @@ export interface FloorHandle {
   planMaterial: THREE.MeshBasicMaterial;
   wallMaterial: THREE.MeshLambertMaterial;
   outlineMaterial: THREE.LineBasicMaterial;
-  /** Null on floors that have no openings (1F). */
-  voidEdgeMaterial: THREE.LineBasicMaterial | null;
   /** Null on the top floor, whose stairs and escalators lead nowhere. */
   coreMaterial: THREE.MeshLambertMaterial | null;
   /** Null on floors with neither classrooms nor common areas. */
@@ -31,8 +29,8 @@ export interface FloorHandle {
 
 /**
  * One floor = footprint slab with the atria punched out, plan-textured plane,
- * every wall segment merged into a single BufferGeometry, plus the outline and
- * void rims as line work. The plan texture is attached later by the viewer once
+ * every wall segment merged into a single BufferGeometry, plus the footprint
+ * outline as line work. The plan texture is attached later by the viewer once
  * loaded.
  *
  * renderOrder is layered per level (§11.4): base = level * 10, then
@@ -50,11 +48,13 @@ export function buildFloorGroup(
   const order = floor.level * 10;
   const voids = floor.features.voids;
 
-  // Frosted glass, not a tint: the slab is what says "there is floor here",
-  // so it has to survive being read through the stacked storeys above it.
+  // A panel, not a tint. The slab is the only thing that says "there is floor
+  // here", so it is lit in the same mint as the walls and sits just under them
+  // in weight (§11.1): read the plate first, the walls standing on it second,
+  // and a void as the plate simply not being there.
   const slabMaterial = new THREE.MeshLambertMaterial({
-    color: 0x2a6154,
-    emissive: 0x0d2a24,
+    color: 0x6ecfae,
+    emissive: 0x16463b,
     transparent: true,
     depthWrite: false,
   });
@@ -126,20 +126,9 @@ export function buildFloorGroup(
   outline.renderOrder = order + 4;
   group.add(outline);
 
-  let voidEdgeMaterial: THREE.LineBasicMaterial | null = null;
-  if (voids.length > 0) {
-    voidEdgeMaterial = new THREE.LineBasicMaterial({
-      color: 0xd8fff0,
-      transparent: true,
-      depthWrite: false,
-    });
-    const rims = new THREE.LineSegments(
-      buildRingGeometry(voids.map((v) => rectRing(v.rect)), transform),
-      voidEdgeMaterial,
-    );
-    rims.renderOrder = order + 4;
-    group.add(rims);
-  }
+  // No rim line around the openings: a glowing white outline made the void the
+  // brightest thing on the floor, i.e. it drew attention to what is NOT there.
+  // The slab's own cut edge is the boundary now.
 
   return {
     id: floor.id,
@@ -150,7 +139,6 @@ export function buildFloorGroup(
     planMaterial,
     wallMaterial,
     outlineMaterial,
-    voidEdgeMaterial,
     coreMaterial,
     furnitureMaterial,
   };
