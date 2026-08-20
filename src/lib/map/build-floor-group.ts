@@ -23,8 +23,10 @@ export interface FloorHandle {
   outlineMaterial: THREE.LineBasicMaterial;
   /** Null on the top floor, whose stairs and escalators lead nowhere. */
   coreMaterial: THREE.MeshLambertMaterial | null;
+  coreMesh: THREE.Mesh | null;
   /** Null on floors with neither classrooms nor common areas. */
   furnitureMaterial: THREE.MeshLambertMaterial | null;
+  furnitureMesh: THREE.Mesh | null;
 }
 
 /**
@@ -90,6 +92,7 @@ export function buildFloorGroup(
   }
 
   let coreMaterial: THREE.MeshLambertMaterial | null = null;
+  let coreMesh: THREE.Mesh | null = null;
   const coreGeometry = buildCoreGeometry(floor.features, transform, isTopFloor);
   if (coreGeometry) {
     coreMaterial = new THREE.MeshLambertMaterial({
@@ -97,14 +100,15 @@ export function buildFloorGroup(
       transparent: true,
       depthWrite: false,
     });
-    const cores = new THREE.Mesh(coreGeometry, coreMaterial);
-    cores.renderOrder = order + 3;
-    group.add(cores);
+    coreMesh = new THREE.Mesh(coreGeometry, coreMaterial);
+    coreMesh.renderOrder = order + 3;
+    group.add(coreMesh);
   }
 
   // Deliberately a separate material from the cores: the furniture is invented
   // and has to be able to fade out well below anything traced from the plan.
   let furnitureMaterial: THREE.MeshLambertMaterial | null = null;
+  let furnitureMesh: THREE.Mesh | null = null;
   const furnitureGeometry = buildFurnitureGeometry(floor.features, transform);
   if (furnitureGeometry) {
     furnitureMaterial = new THREE.MeshLambertMaterial({
@@ -112,9 +116,9 @@ export function buildFloorGroup(
       transparent: true,
       depthWrite: false,
     });
-    const furniture = new THREE.Mesh(furnitureGeometry, furnitureMaterial);
-    furniture.renderOrder = order + 3;
-    group.add(furniture);
+    furnitureMesh = new THREE.Mesh(furnitureGeometry, furnitureMaterial);
+    furnitureMesh.renderOrder = order + 3;
+    group.add(furnitureMesh);
   }
 
   const outlineMaterial = new THREE.LineBasicMaterial({
@@ -140,7 +144,9 @@ export function buildFloorGroup(
     wallMaterial,
     outlineMaterial,
     coreMaterial,
+    coreMesh,
     furnitureMaterial,
+    furnitureMesh,
   };
 }
 

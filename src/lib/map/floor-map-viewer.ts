@@ -19,7 +19,7 @@ import type { BuildingDefinition, CameraMode } from "./types";
 // most of why the model read as "floor everywhere".
 const OPACITY = {
   selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.62, furniture: 0.15 },
-  dimmed: { plan: 0.03, wall: 0.03, slab: 0.02, outline: 0.04, core: 0.03, furniture: 0.01 },
+  dimmed: { plan: 0.03, wall: 0.03, slab: 0.02, outline: 0.04, core: 0, furniture: 0 },
   all: { plan: 0.65, wall: 0.4, slab: 0.26, outline: 0.35, core: 0.34, furniture: 0.1 },
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
@@ -366,8 +366,14 @@ export class FloorMapViewer {
       floor.wallMaterial.opacity = tone.wall;
       floor.slabMaterial.opacity = tone.slab;
       floor.outlineMaterial.opacity = tone.outline;
-      if (floor.coreMaterial) floor.coreMaterial.opacity = tone.core;
-      if (floor.furnitureMaterial) floor.furnitureMaterial.opacity = tone.furniture;
+      if (floor.coreMaterial && floor.coreMesh) {
+        floor.coreMaterial.opacity = tone.core;
+        floor.coreMesh.visible = tone.core > 0;
+      }
+      if (floor.furnitureMaterial && floor.furnitureMesh) {
+        floor.furnitureMaterial.opacity = tone.furniture;
+        floor.furnitureMesh.visible = tone.furniture > 0;
+      }
       floor.group.position.y = tone.lift;
     });
   }
