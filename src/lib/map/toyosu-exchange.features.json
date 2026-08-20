@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-exchange",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": {
+    "default": [[80, 80], [521, 80], [521, 1085], [392, 1085], [392, 994], [80, 994]],
+    "1": [[123, 80], [521, 80], [521, 1085], [392, 1085], [392, 1016], [123, 1016]]
+  },
+  "elevators": [
+    { "id": "ev-north", "rect": [287, 175, 451, 265], "levels": [1, 6] }
+  ],
+  "floors": {
+    "1": {
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [165, 330, 365, 875], "kind": "hall" }]
+    },
+    "2": {
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-middle", "rect": [220, 265, 300, 342], "wallMask": [225, 270, 295, 337], "up": "-z" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [155, 365, 370, 850], "kind": "hall" }]
+    },
+    "3": {
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-middle", "rect": [220, 265, 300, 342], "wallMask": [225, 270, 295, 337], "up": "-z" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [155, 365, 370, 850], "kind": "hall" }]
+    },
+    "4": {
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [155, 365, 370, 850], "kind": "hall" }]
+    },
+    "5": {
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [155, 365, 370, 850], "kind": "hall" }]
+    },
+    "6": {
+      "voids": [{ "rect": [465, 500, 521, 808], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [410, 102, 520, 150], "wallMask": [420, 110, 510, 143], "up": "+x" },
+        { "id": "st-south", "rect": [420, 1032, 520, 1085], "wallMask": [430, 1040, 510, 1078], "up": "+x" }
+      ],
+      "commons": [{ "rect": [145, 570, 370, 760], "kind": "hall" }]
+    }
+  }
+}

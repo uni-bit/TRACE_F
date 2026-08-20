@@ -4,6 +4,8 @@ import generated from "./toyosu-classroom.generated.json";
 import classroomFeatures from "./toyosu-classroom.features.json";
 import researchGenerated from "./toyosu-research.generated.json";
 import researchFeaturesRaw from "./toyosu-research.features.json";
+import exchangeGenerated from "./toyosu-exchange.generated.json";
+import exchangeFeaturesRaw from "./toyosu-exchange.features.json";
 import type { BuildingDefinition, BuildingFloor, FloorMeta, WallSegment } from "./types";
 
 const classroomFloorMeta: FloorMeta[] = [
@@ -84,7 +86,9 @@ export const toyosuClassroom: BuildingDefinition = {
   floors: buildFloors(),
   features: {
     ...features.building,
-    neighbors: neighbors.filter((neighbor) => neighbor.id !== "research-building"),
+    neighbors: neighbors.filter(
+      (neighbor) => !["research-building", "exchange-building"].includes(neighbor.id),
+    ),
   },
 };
 
@@ -131,8 +135,53 @@ export const toyosuResearch: BuildingDefinition = {
   features: researchFeatures.building,
 };
 
+const exchangeFloorMeta: FloorMeta[] = Array.from({ length: 6 }, (_, index) => {
+  const level = index + 1;
+  return {
+    id: String(level),
+    label: `${level}F`,
+    title: `交流棟 ${level}階`,
+    rooms: level === 3
+      ? ["カフェテリア", "WC", "EV・階段"]
+      : ["交流・講義スペース", "WC", "EV・階段"],
+  };
+});
+
+const exchangeFeatures = loadFeatures(
+  exchangeFeaturesRaw,
+  exchangeGenerated.buildingId,
+  exchangeGenerated.plan,
+  exchangeGenerated.floors.map((floor) => ({ id: floor.id, level: floor.level })),
+  "toyosu-exchange.features.json",
+);
+
+function buildExchangeFloors(): BuildingFloor[] {
+  return exchangeGenerated.floors.map((floor) => {
+    const meta = exchangeFloorMeta.find((item) => item.id === floor.id);
+    if (!meta) throw new Error(`exchange floor meta missing for "${floor.id}"`);
+    return {
+      ...meta,
+      level: floor.level,
+      texture: floor.texture,
+      walls: floor.walls.map(([x1, z1, x2, z2]): WallSegment => [x1, z1, x2, z2]),
+      features: exchangeFeatures.byFloor[floor.id],
+    };
+  });
+}
+
+export const toyosuExchange: BuildingDefinition = {
+  id: exchangeGenerated.buildingId,
+  name: "交流棟（カフェテリア）",
+  englishName: "EXCHANGE BUILDING",
+  levelsLabel: "1–6F",
+  plan: exchangeGenerated.plan,
+  masterRect: exchangeGenerated.generated.masterRect,
+  floors: buildExchangeFloors(),
+  features: exchangeFeatures.building,
+};
+
 export function footprintFor(building: BuildingDefinition, floorId: string): [number, number][] {
   return building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
 }
 
-export const buildings: BuildingDefinition[] = [toyosuClassroom, toyosuResearch];
+export const buildings: BuildingDefinition[] = [toyosuClassroom, toyosuResearch, toyosuExchange];

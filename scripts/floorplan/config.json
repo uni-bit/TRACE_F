@@ -104,6 +104,28 @@
         "texturePattern": "floor-{floor}.png",
         "geometryJson": "src/lib/map/toyosu-research.generated.json"
       }
+    },
+    {
+      "id": "toyosu-exchange",
+      "name": "交流棟（カフェテリア）",
+      "pages": { "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64 },
+      "referenceFloor": "3",
+      "masterRect": { "x": 791, "y": 2822, "w": 602, "h": 1142 },
+      "templates": [
+        { "name": "north-core-west", "x": 1120, "y": 2860, "w": 115, "h": 230 },
+        { "name": "north-core-east", "x": 1235, "y": 2860, "w": 115, "h": 230 },
+        { "name": "north-core-south", "x": 1120, "y": 3000, "w": 230, "h": 100 }
+      ],
+      "refineWindow": { "x": 830, "y": 2860, "w": 520, "h": 1000 },
+      "manualShiftOverride": {},
+      "eraserRects": { "global": [], "perFloor": {} },
+      "walls": { "minSegmentFrac": 0.055 },
+      "featuresJson": "src/lib/map/toyosu-exchange.features.json",
+      "output": {
+        "textureDir": "public/floorplans/exchange",
+        "texturePattern": "floor-{floor}.png",
+        "geometryJson": "src/lib/map/toyosu-exchange.generated.json"
+      }
     }
   ]
 }

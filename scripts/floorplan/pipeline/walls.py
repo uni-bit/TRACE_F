@@ -62,7 +62,8 @@ def _load_symbol_rects(config: dict) -> dict[str, list[tuple[int, int, int, int,
         # Stair treads normally fall below the building-specific run threshold.
         # A broad stair box would split real enclosure walls, so only long-run
         # escalator symbols need an explicit rectangular mask here.
-        entries = [(entry, 0) for entry in current.get("escalators", [])]
+        entries = [({"rect": entry["wallMask"]}, 0) for entry in current.get("stairs", []) if "wallMask" in entry]
+        entries += [(entry, 0) for entry in current.get("escalators", [])]
         entries += [
             (entry, -8)
             for entry in current.get("voids", [])
