@@ -6,9 +6,25 @@ import type { CommonArea, ElevatorShaft, FloorFeatures, NormRect, PlanAxis } fro
 
 /** The plan hatching only ever draws one flight, so we only build one (§12.1). */
 const STEPS = 12;
-const ESCALATOR_DECK = 0.02;
-const ESCALATOR_RAIL_HEIGHT = 0.05;
-const ESCALATOR_RAIL_THICKNESS = 0.012;
+
+/**
+ * A whole escalator, not a ramp: deck, treads, balustrades, handrails and the
+ * landing plates at both ends. The plan symbol it replaces (the fine parallel
+ * lines) is punched out of the plan sheet, so this IS the escalator now.
+ */
+const ESCALATOR_DECK = 0.016;
+const ESCALATOR_TREADS = 16;
+const ESCALATOR_TREAD_RISE = 0.011;
+/** Fraction of a tread pitch taken by the raised nose of the step. */
+const ESCALATOR_TREAD_FILL = 0.45;
+const ESCALATOR_SKIRT_HEIGHT = 0.075;
+const ESCALATOR_SKIRT_THICKNESS = 0.009;
+const ESCALATOR_RAIL_HEIGHT = 0.011;
+const ESCALATOR_RAIL_THICKNESS = 0.019;
+const ESCALATOR_LANDING_RUN = 0.055;
+const ESCALATOR_LANDING_THICKNESS = 0.012;
+/** How much of a lane the truss occupies, leaving a gap between the pair. */
+const ESCALATOR_LANE_FILL = 0.88;
 
 const WHITEBOARD_SPAN = 0.6;
 const WHITEBOARD_HEIGHT = 0.12;
@@ -114,9 +130,11 @@ function stairSteps(rect: WorldRect, up: PlanAxis): THREE.BufferGeometry[] {
 }
 
 /**
- * One inclined deck plus two rails per lane. Up and down escalators are the
- * same solid, so a single lane is built and translated across the rect; the
- * arrows on the plan texture already say which way each one runs (§12.2).
+ * A complete escalator per lane: inclined deck, stepped treads, a balustrade
+ * and handrail down each side, and a landing plate where it meets each floor.
+ * Up and down escalators are the same solid, so one lane is built and
+ * translated across the rect; the arrows the plan drew are gone with the rest
+ * of the symbol, and the pair's own geometry says where it runs (§12.2).
  *
  * The pitch comes from the exaggerated storey height, not from the real 30 deg
  * — this is a guide, not a survey (§18).
@@ -138,28 +156,79 @@ function escalatorLanes(rect: WorldRect, up: PlanAxis, lanes: number): THREE.Buf
   const tilt = alongX ? (towardMax ? pitch : -pitch) : (towardMax ? -pitch : pitch);
 
   const parts: THREE.BufferGeometry[] = [];
-  const plank = (acrossWidth: number, height: number, acrossPos: number, lift: number) => {
+
+  /**
+   * A box in the truss's own frame — `s` along the incline from its midpoint,
+   * `h` above the deck centreline — then tilted and dropped onto the rect.
+   * Both signs follow the tilt, so a piece at s > 0 sits at the raised end.
+   */
+  const onTruss = (
+    acrossWidth: number,
+    height: number,
+    alongLength: number,
+    s: number,
+    h: number,
+    acrossPos: number,
+  ) => {
     const box = new THREE.BoxGeometry(
-      alongX ? length : acrossWidth,
+      alongX ? alongLength : acrossWidth,
       height,
-      alongX ? acrossWidth : length,
+      alongX ? acrossWidth : alongLength,
     );
+    box.translate(alongX ? s : 0, h, alongX ? 0 : s);
     if (alongX) box.rotateZ(tilt);
     else box.rotateX(tilt);
     box.translate(
       alongX ? alongCentre : acrossPos,
-      LEVEL_HEIGHT / 2 + lift,
+      LEVEL_HEIGHT / 2,
       alongX ? acrossPos : alongCentre,
     );
     parts.push(box);
   };
 
-  const railLift = (ESCALATOR_DECK + ESCALATOR_RAIL_HEIGHT) / 2;
+  const truss = laneSpan * ESCALATOR_LANE_FILL;
+  const skirtLift = (ESCALATOR_DECK + ESCALATOR_SKIRT_HEIGHT) / 2;
+  const railLift = ESCALATOR_DECK / 2 + ESCALATOR_SKIRT_HEIGHT + ESCALATOR_RAIL_HEIGHT / 2;
+  const treadPitch = length / ESCALATOR_TREADS;
+
   for (let lane = 0; lane < lanes; lane += 1) {
     const centre = acrossStart + laneSpan * (lane + 0.5);
-    plank(laneSpan * 0.86, ESCALATOR_DECK, centre, 0);
-    plank(ESCALATOR_RAIL_THICKNESS, ESCALATOR_RAIL_HEIGHT, centre - laneSpan * 0.43, railLift);
-    plank(ESCALATOR_RAIL_THICKNESS, ESCALATOR_RAIL_HEIGHT, centre + laneSpan * 0.43, railLift);
+    onTruss(truss, ESCALATOR_DECK, length, 0, 0, centre);
+    for (let i = 0; i < ESCALATOR_TREADS; i += 1) {
+      onTruss(
+        truss * 0.9,
+        ESCALATOR_TREAD_RISE,
+        treadPitch * ESCALATOR_TREAD_FILL,
+        -length / 2 + treadPitch * (i + 0.5),
+        (ESCALATOR_DECK + ESCALATOR_TREAD_RISE) / 2,
+        centre,
+      );
+    }
+    for (const side of [-1, 1]) {
+      const edge = centre + (side * truss) / 2;
+      onTruss(ESCALATOR_SKIRT_THICKNESS, ESCALATOR_SKIRT_HEIGHT, length, 0, skirtLift, edge);
+      onTruss(ESCALATOR_RAIL_THICKNESS, ESCALATOR_RAIL_HEIGHT, length, 0, railLift, edge);
+    }
+  }
+
+  // Landing plates: the escalator has to visibly arrive somewhere at both ends,
+  // otherwise the truss reads as a ramp floating over the slab.
+  for (const atMax of [false, true]) {
+    const end = alongX ? (atMax ? rect.x1 : rect.x0) : atMax ? rect.z1 : rect.z0;
+    const outward = atMax ? 1 : -1;
+    const y = towardMax === atMax ? LEVEL_HEIGHT : 0;
+    const plate = new THREE.BoxGeometry(
+      alongX ? ESCALATOR_LANDING_RUN : acrossSpan,
+      ESCALATOR_LANDING_THICKNESS,
+      alongX ? acrossSpan : ESCALATOR_LANDING_RUN,
+    );
+    const along = end + (outward * ESCALATOR_LANDING_RUN) / 2;
+    plate.translate(
+      alongX ? along : (rect.x0 + rect.x1) / 2,
+      y + ESCALATOR_LANDING_THICKNESS / 2,
+      alongX ? (rect.z0 + rect.z1) / 2 : along,
+    );
+    parts.push(plate);
   }
   return parts;
 }

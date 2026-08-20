@@ -14,10 +14,13 @@ import type { BuildingDefinition, CameraMode } from "./types";
 // The slab tracks the walls one notch below them everywhere: the floor has to
 // read as a solid object (a void is where that object stops), while the walls
 // stay the strongest thing standing on it.
+// The unselected storeys are kept to a whisper: at 0.05-ish each, five of them
+// stack into a haze of plates around the one floor being looked at, which is
+// most of why the model read as "floor everywhere".
 const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.45, furniture: 0.15 },
-  dimmed: { plan: 0.06, wall: 0.05, slab: 0.04, outline: 0.05, core: 0.04, furniture: 0.02 },
-  all: { plan: 0.65, wall: 0.4, slab: 0.34, outline: 0.35, core: 0.25, furniture: 0.1 },
+  selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.62, furniture: 0.15 },
+  dimmed: { plan: 0.03, wall: 0.03, slab: 0.02, outline: 0.04, core: 0.03, furniture: 0.01 },
+  all: { plan: 0.65, wall: 0.4, slab: 0.26, outline: 0.35, core: 0.34, furniture: 0.1 },
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;

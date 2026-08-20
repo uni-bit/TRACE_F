@@ -72,7 +72,7 @@ export function buildFloorGroup(
     toneMapped: false,
     side: THREE.DoubleSide,
   });
-  const plan = new THREE.Mesh(buildPlanGeometry(footprint, voids, transform), planMaterial);
+  const plan = new THREE.Mesh(buildPlanGeometry(footprint, planHoles(floor), transform), planMaterial);
   plan.position.y = PLAN_LIFT;
   plan.renderOrder = order + 1;
   group.add(plan);
@@ -144,6 +144,30 @@ export function buildFloorGroup(
   };
 }
 
+/**
+ * Everything the plan sheet must not draw: the openings, plus the escalator
+ * footprints. The escalator symbol is a bundle of fine parallel lines that
+ * reads as noise once there is a real escalator standing on the slab, so the
+ * ink comes out and the geometry takes over. The slab keeps its floor there —
+ * only the drawing is cut.
+ */
+function planHoles(floor: BuildingFloor): NormRect[] {
+  const holes = floor.features.voids.map((v) => v.rect);
+  for (const escalator of floor.features.escalators) {
+    // 5F marks its escalator rect as a well as well; two coincident holes
+    // would hand ShapeGeometry a degenerate contour.
+    if (holes.some((hole) => covers(hole, escalator.rect))) continue;
+    holes.push(escalator.rect);
+  }
+  return holes;
+}
+
+function covers(outer: NormRect, inner: NormRect): boolean {
+  return (
+    outer.x0 <= inner.x0 && outer.x1 >= inner.x1 && outer.z0 <= inner.z0 && outer.z1 >= inner.z1
+  );
+}
+
 function rectRing(rect: NormRect): [number, number][] {
   return [
     [rect.x0, rect.z0],
@@ -181,7 +205,7 @@ function buildSlabGeometry(
 }
 
 /**
- * The plan texture on a footprint-shaped sheet with the voids cut out — NOT a
+ * The plan texture on a footprint-shaped sheet with `holes` cut out — NOT a
  * full-rect plane. If the ink kept drawing across the openings, the chain-line
  * X symbols would float over the holes and a void would read as "floor with an
  * X on it" while real floor reads as nothing: exactly backwards. Clipping the
@@ -190,13 +214,13 @@ function buildSlabGeometry(
  */
 function buildPlanGeometry(
   footprint: [number, number][],
-  voids: VoidFeature[],
+  holes: NormRect[],
   transform: PlanTransform,
 ): THREE.BufferGeometry {
   const shape = new THREE.Shape(
     footprint.map(([nx, nz]) => new THREE.Vector2(toWorldX(nx, transform), toWorldZ(nz, transform))),
   );
-  for (const { rect } of voids) {
+  for (const rect of holes) {
     shape.holes.push(
       new THREE.Path(
         rectRing(rect).map(([nx, nz]) => new THREE.Vector2(toWorldX(nx, transform), toWorldZ(nz, transform))),
