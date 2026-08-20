@@ -3,6 +3,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { buildCoreGeometry, buildFurnitureGeometry } from "./build-features";
 import { LEVEL_HEIGHT, toWorldX, toWorldZ, type PlanTransform } from "./plan-transform";
+import { rectCovers } from "./rect-utils";
 import type { BuildingFloor, NormRect, VoidFeature } from "./types";
 
 export const WALL_HEIGHT = 0.3;
@@ -162,16 +163,10 @@ function planHoles(floor: BuildingFloor): NormRect[] {
   for (const escalator of floor.features.escalators) {
     // 5F marks its escalator rect as a well as well; two coincident holes
     // would hand ShapeGeometry a degenerate contour.
-    if (holes.some((hole) => covers(hole, escalator.rect))) continue;
+    if (holes.some((hole) => rectCovers(hole, escalator.rect))) continue;
     holes.push(escalator.rect);
   }
   return holes;
-}
-
-function covers(outer: NormRect, inner: NormRect): boolean {
-  return (
-    outer.x0 <= inner.x0 && outer.x1 >= inner.x1 && outer.z0 <= inner.z0 && outer.z1 >= inner.z1
-  );
 }
 
 function rectRing(rect: NormRect): [number, number][] {

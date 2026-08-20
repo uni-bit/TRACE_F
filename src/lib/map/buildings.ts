@@ -45,8 +45,7 @@ const classroomFloorMeta: FloorMeta[] = [
 const features = loadFeatures(
   generated.buildingId,
   generated.plan,
-  generated.floors.map((floor) => floor.id),
-  Math.max(...generated.floors.map((floor) => floor.level)),
+  generated.floors.map((floor) => ({ id: floor.id, level: floor.level })),
 );
 const neighbors = loadContextFeatures(
   generated.buildingId,

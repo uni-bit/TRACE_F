@@ -1,5 +1,6 @@
 import raw from "./toyosu-classroom.features.json";
 import { planPxToNormalized } from "./plan-transform";
+import { subtractRect } from "./rect-utils";
 import type {
   BuildingFeatures,
   BuildingPlan,
@@ -107,9 +108,37 @@ export interface LoadedFeatures {
   byFloor: Record<string, FloorFeatures>;
 }
 
-export function loadFeatures(buildingId: string, plan: BuildingPlan, floorIds: string[], maxLevel: number): LoadedFeatures {
+type FloorRef = { id: string; level: number };
+
+function addInheritedEscalatorVoids(byFloor: Record<string, FloorFeatures>, floors: FloorRef[]): void {
+  const byLevel = new Map(floors.map((floor) => [floor.level, floor]));
+  for (const floor of floors) {
+    if (floor.level < 2) continue;
+    const lower = byLevel.get(floor.level - 1);
+    if (!lower) fail(`floor ${floor.id}: lower level ${floor.level - 1} is missing`);
+
+    for (const escalator of byFloor[lower.id].escalators) {
+      let remainder = [escalator.rect];
+      for (const existing of byFloor[floor.id].voids) {
+        remainder = remainder.flatMap((rect) => subtractRect(rect, existing.rect));
+        if (remainder.length > 1) {
+          fail(
+            `floor ${floor.id}: inherited escalator ${escalator.id} minus existing voids is not rectangular`,
+          );
+        }
+      }
+      if (remainder.length === 1) {
+        byFloor[floor.id].voids.push({ rect: remainder[0], kind: "escalator-well" });
+      }
+    }
+  }
+}
+
+export function loadFeatures(buildingId: string, plan: BuildingPlan, floors: FloorRef[]): LoadedFeatures {
   if (raw.buildingId !== buildingId) fail(`buildingId "${raw.buildingId}" does not match "${buildingId}"`);
   if (raw.schemaVersion !== 1) fail(`unsupported schemaVersion ${raw.schemaVersion}`);
+  const floorIds = floors.map((floor) => floor.id);
+  const maxLevel = Math.max(...floors.map((floor) => floor.level));
 
   const byFloor: Record<string, FloorFeatures> = {};
   for (const [floorId, features] of Object.entries(raw.floors as Record<string, RawFloorFeatures>)) {
@@ -119,6 +148,7 @@ export function loadFeatures(buildingId: string, plan: BuildingPlan, floorIds: s
   for (const floorId of floorIds) {
     byFloor[floorId] ??= { voids: [], stairs: [], escalators: [], classrooms: [], commons: [] };
   }
+  addInheritedEscalatorVoids(byFloor, floors);
 
   const footprintsByFloor: Record<string, [number, number][]> = {};
   for (const [floorId, points] of Object.entries(raw.footprints)) {
