@@ -150,7 +150,18 @@
       ],
       "refineWindow": { "x": 1550, "y": 3030, "w": 1120, "h": 1200 },
       "manualShiftOverride": {},
-      "eraserRects": { "global": [], "perFloor": {} },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {
+          "9": [
+            { "x": 0, "y": 0, "w": 1575, "h": 60 },
+            { "x": 0, "y": 60, "w": 290, "h": 855 },
+            { "x": 1500, "y": 60, "w": 75, "h": 590 },
+            { "x": 1007, "y": 650, "w": 568, "h": 265 },
+            { "x": 0, "y": 915, "w": 1575, "h": 468 }
+          ]
+        }
+      },
       "walls": { "minSegmentFrac": 0.035 },
       "featuresJson": "src/lib/map/toyosu-headquarters.features.json",
       "output": {
