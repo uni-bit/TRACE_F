@@ -1,4 +1,4 @@
-import type { BuildingPlan } from "./types";
+import type { BuildingPlan, MasterRect } from "./types";
 
 /**
  * The single normalized-plan -> world mapping. Every drawable (plan texture,
@@ -8,13 +8,6 @@ import type { BuildingPlan } from "./types";
 export interface PlanTransform {
   width: number;
   depth: number;
-}
-
-export interface PixelRect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
 }
 
 const PLAN_WORLD_WIDTH = 6;
@@ -30,6 +23,31 @@ export function planTransform(plan: BuildingPlan): PlanTransform {
   return {
     width: PLAN_WORLD_WIDTH,
     depth: (PLAN_WORLD_WIDTH * plan.heightPx) / plan.widthPx,
+  };
+}
+
+export interface BuildingPlacement {
+  transform: PlanTransform;
+  offsetX: number;
+  offsetZ: number;
+}
+
+/**
+ * Place a registered building in the primary building's world coordinate
+ * system. Both scale and offset come only from the two PDF master rectangles.
+ */
+export function buildingPlacement(
+  masterRect: MasterRect,
+  primaryRect: MasterRect,
+): BuildingPlacement {
+  const scale = PLAN_WORLD_WIDTH / primaryRect.w;
+  const width = masterRect.w * scale;
+  const depth = masterRect.h * scale;
+  return {
+    transform: { width, depth },
+    offsetX: (masterRect.x - primaryRect.x) * scale - PLAN_WORLD_WIDTH / 2 + width / 2,
+    offsetZ:
+      (masterRect.y - primaryRect.y) * scale - (primaryRect.h * scale) / 2 + depth / 2,
   };
 }
 
@@ -59,8 +77,8 @@ export function contextPxToWorld(
   px: number,
   py: number,
   plan: BuildingPlan,
-  masterRect: PixelRect,
-  contextRect: PixelRect,
+  masterRect: MasterRect,
+  contextRect: MasterRect,
 ): { x: number; z: number } {
   const transform = planTransform(plan);
   const scale = transform.width / masterRect.w;

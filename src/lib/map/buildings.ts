@@ -76,6 +76,7 @@ export const toyosuClassroom: BuildingDefinition = {
   englishName: "CLASSROOM BUILDING",
   levelsLabel: "1–6F",
   plan: generated.plan,
+  masterRect: generated.generated.masterRect,
   floors: buildFloors(),
   features: { ...features.building, neighbors },
 };

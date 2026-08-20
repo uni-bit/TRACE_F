@@ -9,7 +9,7 @@ import { buildElevatorShaft } from "./build-features";
 import { buildNeighborMassings } from "./build-context";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
-import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
+import { buildingPlacement, LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
 import type { BuildingDefinition, CameraMode, MapLayer } from "./types";
 
 // The slab tracks the walls one notch below them everywhere: the floor has to
@@ -153,13 +153,15 @@ export class FloorMapViewer {
   private raf = 0;
   private needsRender = true;
   private disposed = false;
-  private selectedFloorId: string | null = null;
+  private selectedLevel: number | null = null;
   private debugStack = false;
 
-  constructor(container: HTMLElement, building: BuildingDefinition, effects = true) {
+  constructor(container: HTMLElement, buildings: BuildingDefinition[], effects = true) {
+    if (buildings.length === 0) throw new Error("FloorMapViewer needs at least one building");
+    const primary = buildings[0];
     this.container = container;
-    this.transform = planTransform(building.plan);
-    this.buildingHeight = building.floors.length * LEVEL_HEIGHT;
+    this.transform = planTransform(primary.plan);
+    this.buildingHeight = Math.max(...buildings.flatMap((building) => building.floors.map((floor) => floor.level))) * LEVEL_HEIGHT;
 
     // Opaque, unlike v1: EffectComposer does not compose over a transparent
     // clear, so the background moves into the scene and the CSS gradient stays
@@ -209,25 +211,30 @@ export class FloorMapViewer {
 
     const loader = new THREE.TextureLoader();
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const topLevel = Math.max(...building.floors.map((f) => f.level));
-    this.floors = building.floors.map((floor) => {
-      const handle = buildFloorGroup(
-        floor,
-        this.transform,
-        footprintFor(building, floor.id),
-        floor.level === topLevel,
-      );
-      this.scene.add(handle.group);
-      const texture = loader.load(floor.texture, () => {
-        if (this.disposed) return;
-        texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = maxAnisotropy;
-        handle.planMaterial.map = texture;
-        handle.planMaterial.needsUpdate = true;
-        this.needsRender = true;
+    this.floors = buildings.flatMap((building) => {
+      const placement = buildingPlacement(building.masterRect, primary.masterRect);
+      const topLevel = Math.max(...building.floors.map((floor) => floor.level));
+      return building.floors.map((floor) => {
+        const handle = buildFloorGroup(
+          floor,
+          placement.transform,
+          footprintFor(building, floor.id),
+          floor.level === topLevel,
+        );
+        handle.group.position.x = placement.offsetX;
+        handle.group.position.z = placement.offsetZ;
+        this.scene.add(handle.group);
+        const texture = loader.load(floor.texture, () => {
+          if (this.disposed) return;
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = maxAnisotropy;
+          handle.planMaterial.map = texture;
+          handle.planMaterial.needsUpdate = true;
+          this.needsRender = true;
+        });
+        this.textures.push(texture);
+        return handle;
       });
-      this.textures.push(texture);
-      return handle;
     });
     this.structureGroup = new THREE.Group();
     this.shaftGroup = new THREE.Group();
@@ -246,15 +253,20 @@ export class FloorMapViewer {
       opacity: SHAFT_OPACITY.edges,
       depthWrite: false,
     });
-    for (const shaft of building.features.elevators) {
-      const { solid, edges } = buildElevatorShaft(shaft, this.transform);
-      const column = new THREE.Mesh(solid, shaftSolid);
-      column.renderOrder = 100;
-      const wires = new THREE.LineSegments(edges, shaftEdges);
-      wires.renderOrder = 100;
-      this.shaftGroup.add(column, wires);
+    for (const building of buildings) {
+      const placement = buildingPlacement(building.masterRect, primary.masterRect);
+      for (const shaft of building.features.elevators) {
+        const { solid, edges } = buildElevatorShaft(shaft, placement.transform);
+        const column = new THREE.Mesh(solid, shaftSolid);
+        column.position.set(placement.offsetX, 0, placement.offsetZ);
+        column.renderOrder = 100;
+        const wires = new THREE.LineSegments(edges, shaftEdges);
+        wires.position.copy(column.position);
+        wires.renderOrder = 100;
+        this.shaftGroup.add(column, wires);
+      }
     }
-    const neighborGeometry = buildNeighborMassings(building.features.neighbors);
+    const neighborGeometry = buildNeighborMassings(buildings.flatMap((building) => building.features.neighbors));
     if (neighborGeometry) {
       const massing = new THREE.Mesh(
         neighborGeometry.solid,
@@ -310,8 +322,8 @@ export class FloorMapViewer {
     this.raf = requestAnimationFrame(this.renderLoop);
   }
 
-  setSelectedFloor(id: string | null): void {
-    this.selectedFloorId = id;
+  setSelectedFloor(level: number | null): void {
+    this.selectedLevel = level;
     this.applyFloorAppearance();
   }
 
@@ -376,9 +388,9 @@ export class FloorMapViewer {
   /** Writes targets only; the render loop eases towards them (§15.4). */
   private applyFloorAppearance(): void {
     this.floors.forEach((floor, i) => {
-      const selected = this.selectedFloorId === floor.id;
+      const selected = this.selectedLevel === floor.level;
       const tone =
-        this.selectedFloorId === null ? OPACITY.all : selected ? OPACITY.selected : OPACITY.dimmed;
+        this.selectedLevel === null ? OPACITY.all : selected ? OPACITY.selected : OPACITY.dimmed;
       this.toneTarget[i] = {
         ...tone,
         lift: this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0),

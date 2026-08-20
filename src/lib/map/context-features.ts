@@ -1,7 +1,7 @@
 import raw from "./toyosu-context.features.json";
 import generated from "./toyosu-context.generated.json";
-import { contextPxToWorld, type PixelRect } from "./plan-transform";
-import type { BuildingPlan, NeighborBuilding } from "./types";
+import { contextPxToWorld } from "./plan-transform";
+import type { BuildingPlan, MasterRect, NeighborBuilding } from "./types";
 
 type RawNeighbor = {
   id: string;
@@ -19,8 +19,8 @@ function fail(message: string): never {
 export function loadContextFeatures(
   buildingId: string,
   plan: BuildingPlan,
-  masterRect: PixelRect,
-  contextRect: PixelRect,
+  masterRect: MasterRect,
+  contextRect: MasterRect,
 ): NeighborBuilding[] {
   if (raw.buildingId !== buildingId) fail(`buildingId "${raw.buildingId}" does not match "${buildingId}"`);
   if (raw.schemaVersion !== 1) fail(`unsupported schemaVersion ${raw.schemaVersion}`);
