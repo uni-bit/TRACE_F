@@ -40,8 +40,8 @@
     },
     "2": {
       "voids": [
-        { "rect": [486, 470, 643, 600], "kind": "atrium" },
-        { "rect": [316, 1145, 388, 1360], "kind": "escalator-well" }
+        { "rect": [518, 468, 645, 598], "kind": "atrium" },
+        { "rect": [318, 1148, 375, 1350], "kind": "escalator-well" }
       ],
       "stairs": [
         { "id": "st-nw", "rect": [95, 292, 197, 356], "up": "+x" },
@@ -50,7 +50,7 @@
         { "id": "st-sw", "rect": [95, 1442, 197, 1500], "up": "+x" }
       ],
       "escalators": [
-        { "id": "es-mid", "rect": [318, 920, 386, 1082], "up": "-z", "lanes": 2 }
+        { "id": "es-mid", "rect": [318, 920, 375, 1082], "up": "-z", "lanes": 2 }
       ],
       "commons": [
         { "rect": [272, 390, 314, 1430], "kind": "corridor" },
@@ -59,7 +59,7 @@
     },
     "3": {
       "voids": [
-        { "rect": [318, 905, 478, 1222], "kind": "atrium" }
+        { "rect": [318, 902, 474, 1218], "kind": "atrium" }
       ],
       "stairs": [
         { "id": "st-nw", "rect": [95, 292, 197, 356], "up": "+x" },
@@ -68,7 +68,7 @@
         { "id": "st-sw", "rect": [95, 1442, 197, 1500], "up": "+x" }
       ],
       "escalators": [
-        { "id": "es-n", "rect": [320, 685, 386, 845], "up": "-z", "lanes": 2 }
+        { "id": "es-n", "rect": [320, 685, 372, 845], "up": "-z", "lanes": 2 }
       ],
       "classrooms": [
         {
@@ -84,7 +84,7 @@
     },
     "4": {
       "voids": [
-        { "rect": [320, 690, 478, 1228], "kind": "atrium" }
+        { "rect": [318, 722, 474, 1148], "kind": "atrium" }
       ],
       "stairs": [
         { "id": "st-nw", "rect": [95, 292, 197, 356], "up": "+x" },
@@ -109,8 +109,8 @@
     },
     "5": {
       "voids": [
-        { "rect": [318, 730, 478, 1068], "kind": "atrium" },
-        { "rect": [320, 450, 388, 610], "kind": "escalator-well" }
+        { "rect": [318, 725, 472, 1063], "kind": "atrium" },
+        { "rect": [318, 448, 390, 612], "kind": "escalator-well" }
       ],
       "stairs": [
         { "id": "st-nw", "rect": [95, 292, 197, 356], "up": "+x" },
@@ -143,8 +143,8 @@
     },
     "6": {
       "voids": [
-        { "rect": [318, 730, 478, 988], "kind": "atrium" },
-        { "rect": [318, 450, 385, 612], "kind": "escalator-well" }
+        { "rect": [318, 725, 472, 985], "kind": "atrium" },
+        { "rect": [318, 448, 390, 612], "kind": "escalator-well" }
       ],
       "stairs": [
         { "id": "st-nw", "rect": [95, 292, 197, 356], "up": "+x" },
