@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-research",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": {
+    "default": [[281, 80], [956, 80], [956, 345], [855, 345], [855, 585], [852, 585], [852, 750], [281, 750]],
+    "9": [[80, 70], [956, 70], [956, 760], [80, 760]],
+    "10": [[80, 70], [956, 70], [956, 760], [80, 760]],
+    "11": [[80, 70], [956, 70], [956, 760], [80, 760]],
+    "12": [[80, 70], [956, 70], [956, 760], [80, 760]],
+    "13": [[80, 70], [956, 70], [956, 760], [80, 760]]
+  },
+  "elevators": [
+    { "id": "ev-west", "rect": [281, 340, 367, 476], "levels": [1, 13] }
+  ],
+  "floors": {
+    "1": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "2": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "3": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [
+        { "rect": [430, 218, 900, 246], "kind": "corridor" },
+        { "rect": [430, 585, 820, 612], "kind": "corridor" }
+      ]
+    },
+    "4": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "5": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "6": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "7": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "8": {
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "9": {
+      "voids": [{ "rect": [80, 330, 285, 495], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "10": {
+      "voids": [{ "rect": [80, 330, 285, 495], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "11": {
+      "voids": [{ "rect": [80, 330, 285, 495], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "12": {
+      "voids": [{ "rect": [80, 330, 285, 495], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    },
+    "13": {
+      "voids": [{ "rect": [80, 330, 285, 495], "kind": "atrium" }],
+      "stairs": [
+        { "id": "st-north", "rect": [665, 270, 720, 346], "up": "+x" },
+        { "id": "st-south", "rect": [370, 470, 424, 586], "up": "-z" }
+      ],
+      "commons": [{ "rect": [430, 218, 900, 246], "kind": "corridor" }]
+    }
+  }
+}

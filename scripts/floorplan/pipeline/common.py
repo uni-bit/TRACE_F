@@ -20,7 +20,11 @@ def load_config() -> dict:
 def building_config(config: dict, building: dict) -> dict:
     """Overlay one building's registration/output settings on shared params."""
     scoped = {key: value for key, value in config.items() if key != "buildings"}
-    scoped.update(building)
+    for key, value in building.items():
+        if isinstance(value, dict) and isinstance(scoped.get(key), dict):
+            scoped[key] = {**scoped[key], **value}
+        else:
+            scoped[key] = value
     scoped["output"] = {**building["output"], "buildingId": building["id"]}
     return scoped
 

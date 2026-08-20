@@ -79,6 +79,31 @@
         "texturePattern": "floor-{floor}.png",
         "geometryJson": "src/lib/map/toyosu-classroom.generated.json"
       }
+    },
+    {
+      "id": "toyosu-research",
+      "name": "研究棟",
+      "pages": {
+        "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64,
+        "7": 65, "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71
+      },
+      "referenceFloor": "3",
+      "masterRect": { "x": 1820, "y": 1148, "w": 1036, "h": 829 },
+      "templates": [
+        { "name": "north-stair", "x": 2460, "y": 1370, "w": 120, "h": 130 },
+        { "name": "south-stair", "x": 2140, "y": 1580, "w": 160, "h": 180 },
+        { "name": "west-core", "x": 2070, "y": 1420, "w": 150, "h": 210 }
+      ],
+      "refineWindow": { "x": 2070, "y": 1200, "w": 700, "h": 700 },
+      "manualShiftOverride": {},
+      "eraserRects": { "global": [], "perFloor": {} },
+      "walls": { "minSegmentFrac": 0.06 },
+      "featuresJson": "src/lib/map/toyosu-research.features.json",
+      "output": {
+        "textureDir": "public/floorplans/research",
+        "texturePattern": "floor-{floor}.png",
+        "geometryJson": "src/lib/map/toyosu-research.generated.json"
+      }
     }
   ]
 }

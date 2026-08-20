@@ -150,6 +150,9 @@ export class FloorMapViewer {
   private lastFrame = 0;
   private readonly resizeObserver: ResizeObserver;
   private readonly buildingHeight: number;
+  private readonly campusCenter: THREE.Vector3;
+  private readonly campusWidth: number;
+  private readonly campusDepth: number;
   private raf = 0;
   private needsRender = true;
   private disposed = false;
@@ -159,9 +162,31 @@ export class FloorMapViewer {
   constructor(container: HTMLElement, buildings: BuildingDefinition[], effects = true) {
     if (buildings.length === 0) throw new Error("FloorMapViewer needs at least one building");
     const primary = buildings[0];
+    const placements = new Map(
+      buildings.map((building) => [building.id, buildingPlacement(building.masterRect, primary.masterRect)]),
+    );
+    const minX = Math.min(...buildings.map((building) => {
+      const placement = placements.get(building.id)!;
+      return placement.offsetX - placement.transform.width / 2;
+    }));
+    const maxX = Math.max(...buildings.map((building) => {
+      const placement = placements.get(building.id)!;
+      return placement.offsetX + placement.transform.width / 2;
+    }));
+    const minZ = Math.min(...buildings.map((building) => {
+      const placement = placements.get(building.id)!;
+      return placement.offsetZ - placement.transform.depth / 2;
+    }));
+    const maxZ = Math.max(...buildings.map((building) => {
+      const placement = placements.get(building.id)!;
+      return placement.offsetZ + placement.transform.depth / 2;
+    }));
     this.container = container;
     this.transform = planTransform(primary.plan);
     this.buildingHeight = Math.max(...buildings.flatMap((building) => building.floors.map((floor) => floor.level))) * LEVEL_HEIGHT;
+    this.campusCenter = new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+    this.campusWidth = maxX - minX;
+    this.campusDepth = maxZ - minZ;
 
     // Opaque, unlike v1: EffectComposer does not compose over a transparent
     // clear, so the background moves into the scene and the CSS gradient stays
@@ -184,8 +209,8 @@ export class FloorMapViewer {
     if (groundTexture) {
       this.textures.push(groundTexture);
       const groundGeometry = new THREE.PlaneGeometry(
-        this.transform.width * 6,
-        this.transform.depth * 6,
+        Math.max(this.transform.width * 6, this.campusWidth * 3),
+        Math.max(this.transform.depth * 6, this.campusDepth * 3),
       );
       groundGeometry.rotateX(-Math.PI / 2);
       // FrontSide on purpose: flying below it with Q must not black out the view.
@@ -194,6 +219,8 @@ export class FloorMapViewer {
         new THREE.MeshBasicMaterial({ map: groundTexture, fog: true, depthWrite: false }),
       );
       ground.position.y = GROUND_Y;
+      ground.position.x = this.campusCenter.x;
+      ground.position.z = this.campusCenter.z;
       ground.renderOrder = -1;
       this.scene.add(ground);
     }
@@ -212,7 +239,7 @@ export class FloorMapViewer {
     const loader = new THREE.TextureLoader();
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
     this.floors = buildings.flatMap((building) => {
-      const placement = buildingPlacement(building.masterRect, primary.masterRect);
+      const placement = placements.get(building.id)!;
       const topLevel = Math.max(...building.floors.map((floor) => floor.level));
       return building.floors.map((floor) => {
         const handle = buildFloorGroup(
@@ -254,7 +281,7 @@ export class FloorMapViewer {
       depthWrite: false,
     });
     for (const building of buildings) {
-      const placement = buildingPlacement(building.masterRect, primary.masterRect);
+      const placement = placements.get(building.id)!;
       for (const shaft of building.features.elevators) {
         const { solid, edges } = buildElevatorShaft(shaft, placement.transform);
         const column = new THREE.Mesh(solid, shaftSolid);
@@ -328,18 +355,23 @@ export class FloorMapViewer {
   }
 
   setCameraMode(mode: CameraMode): void {
-    const target = new THREE.Vector3(0, this.buildingHeight * 0.35, 0);
+    const target = this.campusCenter.clone();
+    target.y = this.buildingHeight * 0.35;
     if (mode === "north") {
-      target.set(0, 0, 0);
-      this.camera.position.set(0, this.buildingHeight + this.transform.depth * 1.15, 0.001);
+      target.y = 0;
+      this.camera.position.set(
+        this.campusCenter.x,
+        this.buildingHeight + Math.max(this.campusWidth, this.campusDepth) * 1.15,
+        this.campusCenter.z + 0.001,
+      );
     } else {
       // The campus context occupies the old +x/+z approach. Looking from the
       // opposite corner keeps the classroom building unobscured in the default
       // composition while the surrounding masses remain legible behind it.
       this.camera.position.set(
-        -this.transform.width * 1.15,
-        this.buildingHeight * 2.4,
-        -this.transform.depth * 0.95,
+        this.campusCenter.x - this.campusWidth * 1.15,
+        Math.max(this.buildingHeight * 2.4, Math.max(this.campusWidth, this.campusDepth) * 0.9),
+        this.campusCenter.z - this.campusDepth * 0.95,
       );
     }
     this.controls.target.copy(target);
@@ -530,8 +562,8 @@ export class FloorMapViewer {
     const target = this.controls.target;
     const from = target.clone();
     target.add(step);
-    target.x = clamp(target.x, -this.transform.width * 2, this.transform.width * 2);
-    target.z = clamp(target.z, -this.transform.depth * 2, this.transform.depth * 2);
+    target.x = clamp(target.x, this.campusCenter.x - this.campusWidth * 2, this.campusCenter.x + this.campusWidth * 2);
+    target.z = clamp(target.z, this.campusCenter.z - this.campusDepth * 2, this.campusCenter.z + this.campusDepth * 2);
     target.y = clamp(target.y, -1, this.buildingHeight + 8);
     // Whatever the clamp actually allowed, not what was asked for.
     this.camera.position.add(target.clone().sub(from));

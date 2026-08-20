@@ -1,4 +1,3 @@
-import raw from "./toyosu-classroom.features.json";
 import { planPxToNormalized } from "./plan-transform";
 import { subtractRect } from "./rect-utils";
 import type {
@@ -26,12 +25,22 @@ interface RawFloorFeatures {
   commons?: { rect: PxRect; kind: string }[];
 }
 
+export interface RawBuildingFeatures {
+  schemaVersion: number;
+  buildingId: string;
+  footprints: Record<string, number[][]> & { default: number[][] };
+  elevators: { id: string; rect: number[]; levels: number[] }[];
+  floors: Record<string, RawFloorFeatures>;
+}
+
 const AXES: PlanAxis[] = ["+x", "-x", "+z", "-z"];
 const VOID_KINDS = ["atrium", "escalator-well", "stair-well"];
 const COMMON_KINDS = ["corridor", "hall"];
 
+let featureSource = "floor features";
+
 function fail(message: string): never {
-  throw new Error(`toyosu-classroom.features.json: ${message}`);
+  throw new Error(`${featureSource}: ${message}`);
 }
 
 function checkAxis(value: string, context: string): PlanAxis {
@@ -134,7 +143,14 @@ function addInheritedEscalatorVoids(byFloor: Record<string, FloorFeatures>, floo
   }
 }
 
-export function loadFeatures(buildingId: string, plan: BuildingPlan, floors: FloorRef[]): LoadedFeatures {
+export function loadFeatures(
+  raw: RawBuildingFeatures,
+  buildingId: string,
+  plan: BuildingPlan,
+  floors: FloorRef[],
+  source = `${buildingId}.features.json`,
+): LoadedFeatures {
+  featureSource = source;
   if (raw.buildingId !== buildingId) fail(`buildingId "${raw.buildingId}" does not match "${buildingId}"`);
   if (raw.schemaVersion !== 1) fail(`unsupported schemaVersion ${raw.schemaVersion}`);
   const floorIds = floors.map((floor) => floor.id);

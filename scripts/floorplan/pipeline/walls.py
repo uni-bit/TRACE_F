@@ -59,10 +59,9 @@ def _load_symbol_rects(config: dict) -> dict[str, list[tuple[int, int, int, int,
     ordered = sorted(features, key=int)
     for index, floor in enumerate(ordered):
         current = features[floor]
-        # Stair treads are shorter than the wall-run threshold and disappear in
-        # the normal morphology. Erasing their broad annotation boxes would
-        # split real enclosure walls, so only the long-run escalator symbols
-        # need an explicit mask at this stage.
+        # Stair treads normally fall below the building-specific run threshold.
+        # A broad stair box would split real enclosure walls, so only long-run
+        # escalator symbols need an explicit rectangular mask here.
         entries = [(entry, 0) for entry in current.get("escalators", [])]
         entries += [
             (entry, -8)

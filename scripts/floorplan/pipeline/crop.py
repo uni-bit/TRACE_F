@@ -18,6 +18,16 @@ from PIL import Image
 from .common import building_debug_dir, crop_padded, cyan_mask
 
 
+def _has_long_edge_run(mask: np.ndarray, minimum: int = 40) -> bool:
+    """Ignore clipped labels/dashes; warn only for a sustained building line."""
+    for edge in (mask[0, :], mask[-1, :], mask[:, 0], mask[:, -1]):
+        padded = np.pad(edge.astype(np.int8), (1, 1))
+        changes = np.flatnonzero(np.diff(padded))
+        if changes.size and int(np.max(changes[1::2] - changes[::2])) >= minimum:
+            return True
+    return False
+
+
 def crop_floors(
     config: dict,
     pages: dict[str, np.ndarray],
@@ -40,7 +50,7 @@ def crop_floors(
                 crop[y0:y1, x0:x1] = 255
         crops[floor] = crop
         edge = cyan_mask(crop, config["cyan"])
-        if edge[0, :].any() or edge[-1, :].any() or edge[:, 0].any() or edge[:, -1].any():
+        if _has_long_edge_run(edge):
             print(f"    WARNING {floor}F: cyan ink touches masterRect edge; expand the rect")
         if debug:
             debug_dir.mkdir(parents=True, exist_ok=True)

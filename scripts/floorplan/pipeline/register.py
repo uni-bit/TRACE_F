@@ -33,6 +33,7 @@ TEMPLATE_MIN_SCORE = 0.4
 TEMPLATE_TOP_PEAKS = 5
 NMS_RADIUS_PX = 80
 CLUSTER_TOLERANCE_PX = 48  # residual is absorbed by the refine correlation
+MAX_REFINE_PX = 48
 
 
 def load_page(path) -> np.ndarray:
@@ -83,6 +84,12 @@ def register_floors(
                 f"({cdx:+d},{cdy:+d}) — check templates or set manualShiftOverride"
             )
         rdx, rdy, rpeak = phase_correlate(ref_win, tgt_win)
+        if abs(rdx) > MAX_REFINE_PX or abs(rdy) > MAX_REFINE_PX:
+            print(
+                f"    {floor}F: WARNING refine ({rdx:+d},{rdy:+d}) exceeds "
+                f"±{MAX_REFINE_PX}px; keeping the template-cluster shift"
+            )
+            rdx, rdy = 0, 0
         dx, dy = cdx + rdx, cdy + rdy
         shifts[floor] = (dx, dy)
         print(
