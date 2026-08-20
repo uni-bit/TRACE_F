@@ -1,4 +1,5 @@
 export type CameraMode = "orbit" | "north";
+export type MapLayer = "slab" | "plan" | "walls" | "cores" | "furniture" | "outline" | "shafts" | "neighbors";
 
 /** Wall centerline in plan-normalized coordinates (±0.5, +z = plan down). */
 export type WallSegment = [x1: number, z1: number, x2: number, z2: number];

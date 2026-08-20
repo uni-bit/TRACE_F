@@ -765,15 +765,17 @@ current += (target - current) * (1 - Math.exp(-dt / TAU))   // TAU = 0.12s
 5. ALL —— EV シャフトが6層を貫通し、積層が1棟に見えるか
 6. `?debug=stack` —— 全フロアを y=0 に潰して外周・コアが一本の線に見えるか。
    EV シャフトが非表示になっているか(§12.3)
-7. フロア切替を10回以上 —— トゥイーンが滑らかで、収束後にレンダが止まること。
+7. 開発時の `?debug=layers` —— slab / plan / walls / cores / furniture /
+   outline / shafts / neighbors を個別に切り、画面上の線の帰属を確認する。
+8. フロア切替を10回以上 —— トゥイーンが滑らかで、収束後にレンダが止まること。
    `document.querySelector(".campus-3d-canvas")` が同一要素のままであること
    (**GL再生成ゼロ**の回帰チェック、v1 §7 と同じ)
-8. WASD / QE / Shift を `KeyboardEvent` の注入で確認。特に **NORTH モードで
+9. WASD / QE / Shift を `KeyboardEvent` の注入で確認。特に **NORTH モードで
    W が画面の上へ動くこと**(§14.2 の縮退分岐)、`blur` 後にキーが残らないこと
-9. `?fx=off` でコンポーザ無効時も破綻しないこと
-10. 平面図の可読性 —— §15.3 のトーンマッピング副作用。濁るなら `NeutralToneMapping`
-11. `npx tsc --noEmit` / `npx eslint .` / `npm run build` がクリーン
-12. モバイル幅(≤680px)でレイアウト崩れなし、フレームレートが実用域
+10. `?fx=off` でコンポーザ無効時も破綻しないこと
+11. 平面図の可読性 —— §15.3 のトーンマッピング副作用。濁るなら `NeutralToneMapping`
+12. `npx tsc --noEmit` / `npx eslint .` / `npm run build` がクリーン
+13. モバイル幅(≤680px)でレイアウト崩れなし、フレームレートが実用域
 
 ## 18. v2 で残る制限
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { FloorMapViewer } from "@/lib/map/floor-map-viewer";
-import type { BuildingDefinition, CameraMode } from "@/lib/map/types";
+import type { BuildingDefinition, CameraMode, MapLayer } from "@/lib/map/types";
 
 type FloorMapCanvasProps = {
   building: BuildingDefinition;
@@ -12,9 +12,10 @@ type FloorMapCanvasProps = {
   debugStack?: boolean;
   /** ?fx=off bypasses the composer for low-end devices. */
   effects?: boolean;
+  layerVisibility?: Record<MapLayer, boolean>;
 };
 
-export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugStack = false, effects = true }: FloorMapCanvasProps) {
+export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugStack = false, effects = true, layerVisibility }: FloorMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<FloorMapViewer | null>(null);
 
@@ -43,6 +44,13 @@ export function FloorMapCanvas({ building, selectedFloorId, cameraMode, debugSta
   useEffect(() => {
     viewerRef.current?.setDebugStack(debugStack);
   }, [debugStack]);
+
+  useEffect(() => {
+    if (!layerVisibility) return;
+    for (const [layer, visible] of Object.entries(layerVisibility)) {
+      viewerRef.current?.setLayerVisibility(layer as MapLayer, visible);
+    }
+  }, [layerVisibility]);
 
   return <div ref={containerRef} className="campus-3d-view" role="img" aria-label={`${building.name}の3Dフロアモデル`} />;
 }

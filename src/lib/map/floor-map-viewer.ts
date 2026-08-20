@@ -10,7 +10,7 @@ import { buildNeighborMassings } from "./build-context";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
 import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
-import type { BuildingDefinition, CameraMode } from "./types";
+import type { BuildingDefinition, CameraMode, MapLayer } from "./types";
 
 // The slab tracks the walls one notch below them everywhere: the floor has to
 // read as a solid object (a void is where that object stops), while the walls
@@ -36,6 +36,16 @@ const GROUND_GRID_PITCH = 64;
 /** Frame-rate independent: 60Hz and 120Hz reach the target in the same time. */
 const TONE_TAU = 0.12;
 const TONE_EPSILON = 1e-3;
+const MAP_LAYERS: MapLayer[] = [
+  "slab",
+  "plan",
+  "walls",
+  "cores",
+  "furniture",
+  "outline",
+  "shafts",
+  "neighbors",
+];
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const FLY_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ShiftLeft", "ShiftRight"]);
@@ -126,6 +136,11 @@ export class FloorMapViewer {
   private readonly floors: FloorHandle[];
   private readonly textures: THREE.Texture[] = [];
   private readonly structureGroup: THREE.Group;
+  private readonly shaftGroup: THREE.Group;
+  private readonly neighborGroup: THREE.Group;
+  private readonly layerVisibility = Object.fromEntries(
+    MAP_LAYERS.map((layer) => [layer, true]),
+  ) as Record<MapLayer, boolean>;
   private readonly pressed = new Set<string>();
   private readonly composer: EffectComposer | null;
   private readonly bloomPass: UnrealBloomPass | null;
@@ -215,6 +230,9 @@ export class FloorMapViewer {
       return handle;
     });
     this.structureGroup = new THREE.Group();
+    this.shaftGroup = new THREE.Group();
+    this.neighborGroup = new THREE.Group();
+    this.structureGroup.add(this.shaftGroup, this.neighborGroup);
     this.scene.add(this.structureGroup);
     const shaftSolid = new THREE.MeshLambertMaterial({
       color: 0x8de4c4,
@@ -234,7 +252,7 @@ export class FloorMapViewer {
       column.renderOrder = 100;
       const wires = new THREE.LineSegments(edges, shaftEdges);
       wires.renderOrder = 100;
-      this.structureGroup.add(column, wires);
+      this.shaftGroup.add(column, wires);
     }
     const neighborGeometry = buildNeighborMassings(building.features.neighbors);
     if (neighborGeometry) {
@@ -258,7 +276,7 @@ export class FloorMapViewer {
         }),
       );
       massingEdges.renderOrder = 6;
-      this.structureGroup.add(massing, massingEdges);
+      this.neighborGroup.add(massing, massingEdges);
     }
 
     if (effects) {
@@ -317,11 +335,18 @@ export class FloorMapViewer {
     this.needsRender = true;
   }
 
+  setLayerVisibility(layer: MapLayer, on: boolean): void {
+    this.layerVisibility[layer] = on;
+    this.writeFloorTones();
+    this.writeStructureVisibility();
+    this.needsRender = true;
+  }
+
   /** Development aid: collapse every floor onto y=0 to eyeball registration. */
   setDebugStack(on: boolean): void {
     this.debugStack = on;
     // A shaft spanning six storeys is meaningless once they all sit on y=0.
-    this.structureGroup.visible = !on;
+    this.writeStructureVisibility();
     this.applyFloorAppearance();
   }
 
@@ -395,16 +420,26 @@ export class FloorMapViewer {
       floor.wallMaterial.opacity = tone.wall;
       floor.slabMaterial.opacity = tone.slab;
       floor.outlineMaterial.opacity = tone.outline;
+      floor.planMesh.visible = this.layerVisibility.plan && tone.plan > 0;
+      if (floor.wallMesh) floor.wallMesh.visible = this.layerVisibility.walls && tone.wall > 0;
+      floor.slabMesh.visible = this.layerVisibility.slab && tone.slab > 0;
+      floor.outlineMesh.visible = this.layerVisibility.outline && tone.outline > 0;
       if (floor.coreMaterial && floor.coreMesh) {
         floor.coreMaterial.opacity = tone.core;
-        floor.coreMesh.visible = tone.core > 0;
+        floor.coreMesh.visible = this.layerVisibility.cores && tone.core > 0;
       }
       if (floor.furnitureMaterial && floor.furnitureMesh) {
         floor.furnitureMaterial.opacity = tone.furniture;
-        floor.furnitureMesh.visible = tone.furniture > 0;
+        floor.furnitureMesh.visible = this.layerVisibility.furniture && tone.furniture > 0;
       }
       floor.group.position.y = tone.lift;
     });
+  }
+
+  private writeStructureVisibility(): void {
+    this.structureGroup.visible = !this.debugStack;
+    this.shaftGroup.visible = this.layerVisibility.shafts;
+    this.neighborGroup.visible = this.layerVisibility.neighbors;
   }
 
   private renderFrame(): void {

@@ -98,6 +98,10 @@ h1 { font-size: clamp(3.1rem, 7.5vw, 6.6rem); letter-spacing: -.075em; line-heig
 .map-floor-selector > span { margin-right: 8px; color: rgba(255,255,255,.4); font-size: .52rem; letter-spacing: .12em; }
 .map-floor-selector button { min-width: 33px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(255,255,255,.55); padding: 5px 6px; font-size: .54rem; letter-spacing: .04em; cursor: pointer; }
 .map-floor-selector button:hover, .map-floor-selector button.is-active { border-color: #9c8bff; background: rgba(156,139,255,.18); color: #fff; }
+.map-layer-debug { margin: 0; padding: 9px 22px 11px; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(8,18,28,.9); display: flex; flex-wrap: wrap; gap: 7px 14px; }
+.map-layer-debug legend { float: left; width: 100%; margin: 0 0 5px; padding: 0; color: #ff9c7d; font-size: .52rem; letter-spacing: .14em; }
+.map-layer-debug label { display: inline-flex; align-items: center; gap: 5px; color: rgba(255,255,255,.62); font: 600 .55rem/1 monospace; cursor: pointer; }
+.map-layer-debug input { accent-color: #8de4c4; }
 .campus-3d-floor-readout { position: absolute; left: 22px; top: 20px; z-index: 3; padding: 6px 9px; border: 1px solid rgba(156,139,255,.52); background: rgba(20,18,35,.76); color: #c9c0ff; font-size: .54rem; letter-spacing: .1em; pointer-events: none; }
 .floor-detail { padding: 18px 17px; border-bottom: 1px solid rgba(255,255,255,.1); }
 .floor-detail-title { display: block; margin: 10px 0; color: rgba(255,255,255,.83); font-size: .72rem; font-weight: 500; }

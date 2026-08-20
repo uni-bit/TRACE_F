@@ -6,11 +6,21 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { toyosuClassroom } from "@/lib/map/buildings";
-import type { CameraMode } from "@/lib/map/types";
+import type { CameraMode, MapLayer } from "@/lib/map/types";
 import { FloorMapCanvas } from "./floor-map-canvas";
 
 const building = toyosuClassroom;
 const DEFAULT_FLOOR_ID = "3";
+const DEBUG_LAYERS: { id: MapLayer; label: string }[] = [
+  { id: "slab", label: "slab" },
+  { id: "plan", label: "plan" },
+  { id: "walls", label: "walls" },
+  { id: "cores", label: "cores" },
+  { id: "furniture", label: "furniture" },
+  { id: "outline", label: "outline" },
+  { id: "shafts", label: "shafts" },
+  { id: "neighbors", label: "neighbors" },
+];
 
 function parseFloorParam(value: string | null): string | null {
   if (value === "all") return null;
@@ -24,7 +34,11 @@ export function MapScreen() {
   const [selectedFloorId, setSelectedFloorId] = useState<string | null>(() =>
     parseFloorParam(searchParams.get("floor")),
   );
+  const [layerVisibility, setLayerVisibility] = useState<Record<MapLayer, boolean>>(() =>
+    Object.fromEntries(DEBUG_LAYERS.map(({ id }) => [id, true])) as Record<MapLayer, boolean>,
+  );
   const debugStack = process.env.NODE_ENV !== "production" && searchParams.get("debug") === "stack";
+  const debugLayers = process.env.NODE_ENV !== "production" && searchParams.get("debug") === "layers";
   const effects = searchParams.get("fx") !== "off";
   const selectedFloor = building.floors.find((floor) => floor.id === selectedFloorId);
 
@@ -66,9 +80,26 @@ export function MapScreen() {
               <button type="button" className={selectedFloorId === null ? "is-active" : ""} aria-pressed={selectedFloorId === null} onClick={() => selectFloor(null)}>ALL</button>
               {building.floors.map((floor) => <button type="button" key={floor.id} className={selectedFloorId === floor.id ? "is-active" : ""} aria-pressed={selectedFloorId === floor.id} onClick={() => selectFloor(floor.id)}>{floor.label}</button>)}
             </div>
+            {debugLayers && (
+              <fieldset className="map-layer-debug">
+                <legend>DEV / LAYER VISIBILITY</legend>
+                {DEBUG_LAYERS.map(({ id, label }) => (
+                  <label key={id}>
+                    <input
+                      type="checkbox"
+                      checked={layerVisibility[id]}
+                      onChange={(event) =>
+                        setLayerVisibility((current) => ({ ...current, [id]: event.target.checked }))
+                      }
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
 
             <div className={`map-stage ${cameraMode === "north" ? "map-stage-north" : ""}`}>
-              <FloorMapCanvas building={building} selectedFloorId={selectedFloorId} cameraMode={cameraMode} debugStack={debugStack} effects={effects} />
+              <FloorMapCanvas building={building} selectedFloorId={selectedFloorId} cameraMode={cameraMode} debugStack={debugStack} effects={effects} layerVisibility={layerVisibility} />
               <div className="campus-3d-floor-readout">{selectedFloor ? `${selectedFloor.label} / ${selectedFloor.title}` : "ALL FLOORS"}</div>
               <div className="campus-3d-hint">WASD 移動 / QE 上下 / DRAG 回転 / WHEEL ズーム</div>
               <div className="map-compass" aria-hidden="true"><span>N</span><i /></div>

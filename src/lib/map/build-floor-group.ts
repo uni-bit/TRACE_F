@@ -18,6 +18,10 @@ export interface FloorHandle {
   level: number;
   baseY: number;
   group: THREE.Group;
+  slabMesh: THREE.Mesh;
+  planMesh: THREE.Mesh;
+  wallMesh: THREE.Mesh | null;
+  outlineMesh: THREE.LineSegments;
   slabMaterial: THREE.MeshLambertMaterial;
   planMaterial: THREE.MeshBasicMaterial;
   wallMaterial: THREE.MeshLambertMaterial;
@@ -61,9 +65,9 @@ export function buildFloorGroup(
     transparent: true,
     depthWrite: false,
   });
-  const slab = new THREE.Mesh(buildSlabGeometry(footprint, voids, transform), slabMaterial);
-  slab.renderOrder = order;
-  group.add(slab);
+  const slabMesh = new THREE.Mesh(buildSlabGeometry(footprint, voids, transform), slabMaterial);
+  slabMesh.renderOrder = order;
+  group.add(slabMesh);
 
   const planMaterial = new THREE.MeshBasicMaterial({
     color: 0xffffff,
@@ -75,10 +79,10 @@ export function buildFloorGroup(
     toneMapped: false,
     side: THREE.DoubleSide,
   });
-  const plan = new THREE.Mesh(buildPlanGeometry(footprint, planHoles(floor), transform), planMaterial);
-  plan.position.y = PLAN_LIFT;
-  plan.renderOrder = order + 1;
-  group.add(plan);
+  const planMesh = new THREE.Mesh(buildPlanGeometry(footprint, planHoles(floor), transform), planMaterial);
+  planMesh.position.y = PLAN_LIFT;
+  planMesh.renderOrder = order + 1;
+  group.add(planMesh);
 
   const wallMaterial = new THREE.MeshLambertMaterial({
     color: 0x8de4c4,
@@ -86,10 +90,11 @@ export function buildFloorGroup(
     depthWrite: false,
   });
   const wallGeometry = mergeWallGeometry(floor, transform);
+  let wallMesh: THREE.Mesh | null = null;
   if (wallGeometry) {
-    const walls = new THREE.Mesh(wallGeometry, wallMaterial);
-    walls.renderOrder = order + 2;
-    group.add(walls);
+    wallMesh = new THREE.Mesh(wallGeometry, wallMaterial);
+    wallMesh.renderOrder = order + 2;
+    group.add(wallMesh);
   }
 
   let coreMaterial: THREE.MeshLambertMaterial | null = null;
@@ -127,9 +132,9 @@ export function buildFloorGroup(
     transparent: true,
     depthWrite: false,
   });
-  const outline = new THREE.LineSegments(buildRingGeometry([footprint], transform), outlineMaterial);
-  outline.renderOrder = order + 4;
-  group.add(outline);
+  const outlineMesh = new THREE.LineSegments(buildRingGeometry([footprint], transform), outlineMaterial);
+  outlineMesh.renderOrder = order + 4;
+  group.add(outlineMesh);
 
   // No rim line around the openings: a glowing white outline made the void the
   // brightest thing on the floor, i.e. it drew attention to what is NOT there.
@@ -140,6 +145,10 @@ export function buildFloorGroup(
     level: floor.level,
     baseY,
     group,
+    slabMesh,
+    planMesh,
+    wallMesh,
+    outlineMesh,
     slabMaterial,
     planMaterial,
     wallMaterial,
