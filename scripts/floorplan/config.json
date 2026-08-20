@@ -12,7 +12,7 @@
     "mergeParallelPx": 4,
     "minSegmentFrac": 0.02
   },
-  "texture": { "alphaGain": 2.2, "inkLighten": 0.55 },
+  "texture": { "alphaGain": 2.2, "inkLighten": 0.55, "maxSidePx": 768 },
   "buildings": [
     {
       "id": "toyosu-classroom",
@@ -75,7 +75,7 @@
         "7": 65, "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71
       },
       "referenceFloor": "3",
-      "masterRect": { "x": 1820, "y": 1148, "w": 1036, "h": 829 },
+      "masterRect": { "x": 500, "y": 1148, "w": 2356, "h": 829 },
       "templates": [
         { "name": "north-stair", "x": 2460, "y": 1370, "w": 120, "h": 130 },
         { "name": "south-stair", "x": 2140, "y": 1580, "w": 160, "h": 180 },
@@ -83,7 +83,24 @@
       ],
       "refineWindow": { "x": 2070, "y": 1200, "w": 700, "h": 700 },
       "manualShiftOverride": {},
-      "eraserRects": { "global": [], "perFloor": {} },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {
+          "1": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "2": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "3": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "4": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "5": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "6": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "7": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "8": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
+          "9": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
+          "10": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
+          "11": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
+          "12": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
+          "13": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }]
+        }
+      },
       "walls": { "minSegmentFrac": 0.06 },
       "featuresJson": "src/lib/map/toyosu-research.features.json",
       "output": {
@@ -105,7 +122,10 @@
       ],
       "refineWindow": { "x": 830, "y": 2860, "w": 520, "h": 1000 },
       "manualShiftOverride": {},
-      "eraserRects": { "global": [], "perFloor": {} },
+      "eraserRects": {
+        "global": [{ "x": 522, "y": 0, "w": 80, "h": 1142 }],
+        "perFloor": {}
+      },
       "walls": { "minSegmentFrac": 0.055 },
       "featuresJson": "src/lib/map/toyosu-exchange.features.json",
       "output": {

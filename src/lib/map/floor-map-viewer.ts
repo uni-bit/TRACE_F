@@ -14,13 +14,20 @@ import type { BuildingDefinition, CameraMode, MapLayer } from "./types";
 // The slab tracks the walls one notch below them everywhere: the floor has to
 // read as a solid object (a void is where that object stops), while the walls
 // stay the strongest thing standing on it.
-// The unselected storeys are kept to a whisper: at 0.05-ish each, five of them
-// stack into a haze of plates around the one floor being looked at, which is
-// most of why the model read as "floor everywhere".
 const OPACITY = {
   selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.62, furniture: 0.15 },
-  dimmed: { plan: 0.03, wall: 0.03, slab: 0.02, outline: 0.04, core: 0, furniture: 0 },
   all: { plan: 0.65, wall: 0.4, slab: 0.26, outline: 0.35, core: 0.34, furniture: 0.1 },
+} as const;
+// These are composite targets for the complete stack of unselected floors,
+// not per-floor opacities. Keeping the stack total fixed prevents 37 faint
+// sheets from becoming almost opaque when the campus grows beyond one block.
+const DIMMED_STACK_OPACITY = {
+  plan: 0.08,
+  wall: 0.07,
+  slab: 0.03,
+  outline: 0.08,
+  core: 0,
+  furniture: 0,
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
@@ -53,6 +60,12 @@ const MAX_FRAME_SECONDS = 0.05;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/** Per-layer alpha whose repeated composition reaches `stackOpacity`. */
+function opacityForStack(stackOpacity: number, layerCount: number): number {
+  if (stackOpacity === 0 || layerCount === 0) return 0;
+  return 1 - Math.pow(1 - stackOpacity, 1 / layerCount);
 }
 
 function isTextEntry(element: Element | null): boolean {
@@ -388,10 +401,21 @@ export class FloorMapViewer {
 
   /** Writes targets only; the render loop eases towards them (§15.4). */
   private applyFloorAppearance(): void {
+    const dimmedCount = this.selectedLevel === null
+      ? 0
+      : this.floors.filter((floor) => floor.level !== this.selectedLevel).length;
+    const dimmed = {
+      plan: opacityForStack(DIMMED_STACK_OPACITY.plan, dimmedCount),
+      wall: opacityForStack(DIMMED_STACK_OPACITY.wall, dimmedCount),
+      slab: opacityForStack(DIMMED_STACK_OPACITY.slab, dimmedCount),
+      outline: opacityForStack(DIMMED_STACK_OPACITY.outline, dimmedCount),
+      core: opacityForStack(DIMMED_STACK_OPACITY.core, dimmedCount),
+      furniture: opacityForStack(DIMMED_STACK_OPACITY.furniture, dimmedCount),
+    };
     this.floors.forEach((floor, i) => {
       const selected = this.selectedLevel === floor.level;
       const tone =
-        this.selectedLevel === null ? OPACITY.all : selected ? OPACITY.selected : OPACITY.dimmed;
+        this.selectedLevel === null ? OPACITY.all : selected ? OPACITY.selected : dimmed;
       this.toneTarget[i] = {
         ...tone,
         lift: this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0),

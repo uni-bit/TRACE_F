@@ -26,6 +26,16 @@ def _blueprint_rgba(rgb: np.ndarray, params: dict) -> np.ndarray:
     return rgba
 
 
+def _fit_texture(img: Image.Image, params: dict) -> Image.Image:
+    """Cap GPU dimensions while preserving the registered plan aspect ratio."""
+    max_side = params.get("maxSidePx")
+    if not max_side or max(img.size) <= max_side:
+        return img
+    resized = img.copy()
+    resized.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+    return resized
+
+
 def emit(
     config: dict,
     crops: dict[str, np.ndarray],
@@ -43,6 +53,7 @@ def emit(
     for floor in sorted(crops, key=int):
         name = out["texturePattern"].format(floor=floor)
         img = Image.fromarray(_blueprint_rgba(crops[floor], config["texture"]))
+        img = _fit_texture(img, config["texture"])
         path = texture_dir / name
         img.save(path, optimize=True)
         print(f"    {path.relative_to(ROOT)} ({path.stat().st_size // 1024} KB, {len(walls[floor])} wall segments)")
@@ -71,6 +82,7 @@ def emit(
             "masterRect": rect,
             "shifts": {floor: list(s) for floor, s in sorted(shifts.items(), key=lambda kv: int(kv[0]))},
             "wallParams": config["walls"],
+            "textureParams": config["texture"],
         },
         "plan": {"widthPx": rect["w"], "heightPx": rect["h"]},
         "floors": floors,

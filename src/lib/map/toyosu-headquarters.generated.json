@@ -95,6 +95,11 @@
       "minRunPx": 50,
       "mergeParallelPx": 4,
       "minSegmentFrac": 0.035
+    },
+    "textureParams": {
+      "alphaGain": 2.2,
+      "inkLighten": 0.55,
+      "maxSidePx": 768
     }
   },
   "plan": {
