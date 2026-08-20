@@ -6,6 +6,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
 import { buildElevatorShaft } from "./build-features";
+import { buildNeighborMassings } from "./build-context";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
 import { LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
@@ -24,6 +25,7 @@ const OPACITY = {
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
+const NEIGHBOR_OPACITY = { solid: 0.14, edges: 0.24 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 const BACKGROUND = 0x0b1420;
@@ -184,7 +186,7 @@ export class FloorMapViewer {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 3.5;
-    this.controls.maxDistance = 30;
+    this.controls.maxDistance = 48;
     this.controls.maxPolarAngle = 1.35;
     this.controls.addEventListener("change", () => {
       this.needsRender = true;
@@ -234,6 +236,30 @@ export class FloorMapViewer {
       wires.renderOrder = 100;
       this.structureGroup.add(column, wires);
     }
+    const neighborGeometry = buildNeighborMassings(building.features.neighbors);
+    if (neighborGeometry) {
+      const massing = new THREE.Mesh(
+        neighborGeometry.solid,
+        new THREE.MeshLambertMaterial({
+          color: 0x527a73,
+          transparent: true,
+          opacity: NEIGHBOR_OPACITY.solid,
+          depthWrite: false,
+        }),
+      );
+      massing.renderOrder = 90;
+      const massingEdges = new THREE.LineSegments(
+        neighborGeometry.edges,
+        new THREE.LineBasicMaterial({
+          color: 0x8aafa5,
+          transparent: true,
+          opacity: NEIGHBOR_OPACITY.edges,
+          depthWrite: false,
+        }),
+      );
+      massingEdges.renderOrder = 91;
+      this.structureGroup.add(massing, massingEdges);
+    }
 
     if (effects) {
       // samples: 4 is not optional — drawing into a render target disables the
@@ -278,9 +304,9 @@ export class FloorMapViewer {
       this.camera.position.set(0, this.buildingHeight + this.transform.depth * 1.15, 0.001);
     } else {
       this.camera.position.set(
-        this.transform.width * 1.15,
+        -this.transform.width * 1.15,
         this.buildingHeight * 2.4,
-        this.transform.depth * 0.95,
+        -this.transform.depth * 0.95,
       );
     }
     this.controls.target.copy(target);

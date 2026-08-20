@@ -82,6 +82,14 @@ export interface ElevatorShaft {
   levels: [number, number];
 }
 
+/** Coarse surrounding-building massing; footprint points are world XZ. */
+export interface NeighborBuilding {
+  id: string;
+  name: string;
+  levels: number;
+  footprint: [number, number][];
+}
+
 export interface FloorFeatures {
   voids: VoidFeature[];
   stairs: StairFeature[];
@@ -94,6 +102,8 @@ export interface BuildingFeatures {
   /** Slab outline per floor; floors without an override use `default`. */
   footprints: { default: [number, number][]; byFloor: Record<string, [number, number][]> };
   elevators: ElevatorShaft[];
+  /** Context only: never participates in floor selection or registration. */
+  neighbors: NeighborBuilding[];
 }
 
 export type BuildingFloor = FloorMeta &

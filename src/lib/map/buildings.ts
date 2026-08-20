@@ -1,4 +1,5 @@
 import { loadFeatures } from "./features";
+import { loadContextFeatures } from "./context-features";
 import generated from "./toyosu-classroom.generated.json";
 import type { BuildingDefinition, BuildingFloor, FloorMeta, WallSegment } from "./types";
 
@@ -47,6 +48,12 @@ const features = loadFeatures(
   generated.floors.map((floor) => floor.id),
   Math.max(...generated.floors.map((floor) => floor.level)),
 );
+const neighbors = loadContextFeatures(
+  generated.buildingId,
+  generated.plan,
+  generated.generated.masterRect,
+  generated.generated.contextRect,
+);
 
 function buildFloors(): BuildingFloor[] {
   return generated.floors.map((floor) => {
@@ -71,7 +78,7 @@ export const toyosuClassroom: BuildingDefinition = {
   levelsLabel: "1–6F",
   plan: generated.plan,
   floors: buildFloors(),
-  features: features.building,
+  features: { ...features.building, neighbors },
 };
 
 export function footprintFor(building: BuildingDefinition, floorId: string): [number, number][] {

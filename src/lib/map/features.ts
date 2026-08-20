@@ -142,6 +142,7 @@ export function loadFeatures(buildingId: string, plan: BuildingPlan, floorIds: s
           levels: [lo, hi] as [number, number],
         };
       }),
+      neighbors: [],
     },
     byFloor,
   };

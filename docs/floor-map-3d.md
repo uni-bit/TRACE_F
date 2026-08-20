@@ -584,6 +584,19 @@ dimmed を軒並み半分以下(plan 0.03 / wall 0.03 / slab 0.02 / outline 0.04
 ALL の slab も 0.34 → 0.26 にして積層を透かした。selected の slab 0.72 は据え置き
 —— そこは §13.6 で解決済みの部分なので触らない。
 
+### 13.8 周辺棟のコンテキストマッシング
+
+教室棟の `masterRect` は一切動かさず、同じPDFページ座標と登録シフトを使う
+`contextRect` を追加する。周辺4棟(研究棟・交流棟・本部棟・アーキテクチャ
+プラザ)は `toyosu-context.features.json` の粗い多角形と階数から、各棟1個の
+`ExtrudeGeometry` を生成する。壁・図面・什器は持たず、低彩度ミントの半透明な
+塊と輪郭だけにして教室棟より確実に沈める。
+
+`contextPxToWorld()` はコンテキスト座標へ `contextRect - masterRect` のページ原点差を
+加え、既存の `PLAN_WORLD_WIDTH / masterRect.w` を掛ける。追加の位置合わせ値は持たない。
+周辺棟はフロアグループ外の `structureGroup` に置き、階選択・リフト・トゥイーンの
+対象外とする。`preview_context_features.py` で元図面への重畳を確認できる。
+
 ## 14. Unityライク・フライ操作
 
 ### 14.1 キー割当

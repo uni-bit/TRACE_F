@@ -119,4 +119,5 @@ h1 { font-size: clamp(3.1rem, 7.5vw, 6.6rem); letter-spacing: -.075em; line-heig
 .guide-core { border: 1px solid #8de4c4; background: rgba(141,228,196,.45); }
 .guide-void { border: 1px dashed rgba(141,228,196,.45); background: transparent; }
 .guide-furniture { border: 1px dashed rgba(159,216,198,.7); background: rgba(159,216,198,.12); }
+.guide-neighbor { border: 1px solid rgba(138,175,165,.7); background: rgba(82,122,115,.18); }
 @media (max-width: 680px) { .map-stage { min-height: 470px; } }

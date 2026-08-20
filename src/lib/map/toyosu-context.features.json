@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-classroom",
+  "coordinateSpace": "context-rect-px",
+  "polygonFormat": "[x,y] points, origin=context crop top-left",
+  "neighbors": [
+    {
+      "id": "research-building",
+      "name": "研究棟",
+      "levels": 14,
+      "footprint": [[1490, 50], [2200, 50], [2200, 760], [1490, 760]]
+    },
+    {
+      "id": "exchange-building",
+      "name": "交流棟（カフェテリア）",
+      "levels": 7,
+      "footprint": [[270, 1650], [720, 1650], [720, 3050], [600, 3050], [600, 3150], [270, 3150]]
+    },
+    {
+      "id": "headquarters-building",
+      "name": "本部棟",
+      "levels": 14,
+      "footprint": [[960, 1850], [2080, 1850], [2080, 3000], [1900, 3000], [1900, 3140], [960, 3140]]
+    },
+    {
+      "id": "architecture-plaza",
+      "name": "アーキテクチャプラザ（交流プラザ）",
+      "levels": 2,
+      "footprint": [[1690, 980], [2050, 980], [2050, 1520], [1690, 1520]]
+    }
+  ]
+}
