@@ -124,7 +124,9 @@
       "manualShiftOverride": {},
       "eraserRects": {
         "global": [{ "x": 522, "y": 0, "w": 80, "h": 1142 }],
-        "perFloor": {}
+        "perFloor": {
+          "6": [{ "x": 0, "y": 0, "w": 522, "h": 80 }]
+        }
       },
       "walls": { "minSegmentFrac": 0.055 },
       "featuresJson": "src/lib/map/toyosu-exchange.features.json",
