@@ -13,6 +13,18 @@
   "refineWindow": { "x": 652, "y": 1400, "w": 468, "h": 1290 },
   "masterRect": { "x": 632, "y": 1196, "w": 912, "h": 1514 },
   "contextRect": { "x": 600, "y": 1150, "w": 2260, "h": 3220 },
+  "contextEraserRects": [
+    { "x": 760, "y": 1600, "w": 180, "h": 900 },
+    { "x": 2200, "y": 0, "w": 60, "h": 3220 }
+  ],
+  "contextTrace": {
+    "featuresJson": "src/lib/map/toyosu-context.features.json",
+    "geometryJson": "src/lib/map/toyosu-context.generated.json",
+    "closePx": 85,
+    "minContourAreaPx": 20000,
+    "approxEpsilonFrac": 0.004,
+    "maxVertices": 40
+  },
   "manualShiftOverride": {},
   "eraserRects": {
     "global": [],
@@ -61,8 +73,6 @@
   "output": {
     "textureDir": "public/floorplans/classroom",
     "texturePattern": "floor-{floor}.png",
-    "contextTextureDir": "public/floorplans/context",
-    "contextTexturePattern": "floor-{floor}.png",
     "geometryJson": "src/lib/map/toyosu-classroom.generated.json",
     "buildingId": "toyosu-classroom"
   }

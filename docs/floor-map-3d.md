@@ -589,19 +589,6 @@ dimmed を軒並み半分以下(plan 0.03 / wall 0.03 / slab 0.02 / outline 0.04
 ALL の slab も 0.34 → 0.26 にして積層を透かした。selected の slab 0.72 は据え置き
 —— そこは §13.6 で解決済みの部分なので触らない。
 
-### 13.8 周辺棟のコンテキストマッシング
-
-教室棟の `masterRect` は一切動かさず、同じPDFページ座標と登録シフトを使う
-`contextRect` を追加する。周辺4棟(研究棟・交流棟・本部棟・アーキテクチャ
-プラザ)は `toyosu-context.features.json` の粗い多角形と階数から、各棟1個の
-`ExtrudeGeometry` を生成する。壁・図面・什器は持たず、低彩度ミントの半透明な
-塊と輪郭だけにして教室棟より確実に沈める。
-
-`contextPxToWorld()` はコンテキスト座標へ `contextRect - masterRect` のページ原点差を
-加え、既存の `PLAN_WORLD_WIDTH / masterRect.w` を掛ける。追加の位置合わせ値は持たない。
-周辺棟はフロアグループ外の `structureGroup` に置き、階選択・リフト・トゥイーンの
-対象外とする。`preview_context_features.py` で元図面への重畳を確認できる。
-
 ## 14. Unityライク・フライ操作
 
 ### 14.1 キー割当
@@ -801,3 +788,24 @@ current += (target - current) * (1 - Math.exp(-dt / TAU))   // TAU = 0.12s
 - 斜め壁・曲面壁(1Fエントランスの曲線)は v1 同様、テクスチャにのみ写る
 - 4F以上の南側ウィングは対象外(§1)。features.json は棟をまたがない
 - ブルームは低性能端末で重い。`?fx=off` は逃げ道であって自動判定ではない
+
+## 19. 周辺棟のコンテキストマッシング
+
+教室棟の `masterRect` は一切動かさず、参照階3F(page 61)だけを同じPDFページ座標の
+`contextRect` で切り出す。階ごとの誌面レイアウトは揃っていないため、他5階の
+コンテキスト画像は生成・利用しない。
+
+周辺棟の外形は `pipeline/context.py` がシアン線を形態学的に閉じ、連結成分の外輪郭を
+40頂点以下へ単純化して `toyosu-context.generated.json` に出力する。手書きの
+`toyosu-context.features.json` が持つのはID・表示名・階数・輪郭を特定する内部点だけ。
+研究棟13階、交流棟6階、本部棟14階を対象とし、page 61 に棟外形が無い
+有元史郎記念校友会館は描画しない。
+
+`contextPxToWorld()` はコンテキスト座標へ `contextRect - masterRect` のページ原点差を
+加え、既存の `PLAN_WORLD_WIDTH / masterRect.w` を掛ける。各外形は
+`levels * LEVEL_HEIGHT` の `ExtrudeGeometry` とし、フロアグループ外へ置く。
+renderOrder はフロア群より前、塊を輪郭より強くして教室棟への線の貫通を防ぐ。
+
+この配置はキャンパス案内図の**誌面レイアウト準拠の概略**であり、測量結果ではない。
+`preview_context_features.py` の重畳は図面外形との一致を確認するためのゲートであって、
+実距離・実方位の精度を保証するものではない。

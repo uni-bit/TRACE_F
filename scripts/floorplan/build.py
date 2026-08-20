@@ -17,13 +17,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from pipeline.common import load_config
+from pipeline.context import trace_context
 from pipeline.crop import crop_floors
 from pipeline.emit import emit
 from pipeline.register import load_page, register_floors
 from pipeline.render import render_pages, source_sha256
 from pipeline.walls import extract_walls
 
-STAGES = ["render", "register", "crop", "walls", "emit"]
+STAGES = ["render", "register", "crop", "context", "walls", "emit"]
 
 
 def main() -> None:
@@ -47,12 +48,17 @@ def main() -> None:
         return
 
     print("crop")
-    crops = crop_floors(config, pages, shifts, debug=args.debug)
+    crops, context_crop = crop_floors(config, pages, shifts, debug=args.debug)
     if last < 3:
         return
 
-    walls = extract_walls(config, crops, debug=args.debug)
+    print("context")
+    trace_context(config, context_crop, debug=args.debug)
     if last < 4:
+        return
+
+    walls = extract_walls(config, crops, debug=args.debug)
+    if last < 5:
         return
 
     emit(config, crops, walls, shifts, source_sha256(config))

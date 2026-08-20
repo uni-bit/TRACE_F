@@ -25,11 +25,11 @@ const OPACITY = {
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
-const NEIGHBOR_OPACITY = { solid: 0.14, edges: 0.24 } as const;
+const NEIGHBOR_OPACITY = { solid: 0.28, edges: 0.12 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 const BACKGROUND = 0x0b1420;
-const FOG_DENSITY = 0.035;
+const FOG_DENSITY = 0.018;
 const GROUND_Y = -0.6;
 const GROUND_TEXTURE_SIZE = 2048;
 const GROUND_GRID_PITCH = 64;
@@ -247,7 +247,7 @@ export class FloorMapViewer {
           depthWrite: false,
         }),
       );
-      massing.renderOrder = 90;
+      massing.renderOrder = 5;
       const massingEdges = new THREE.LineSegments(
         neighborGeometry.edges,
         new THREE.LineBasicMaterial({
@@ -257,7 +257,7 @@ export class FloorMapViewer {
           depthWrite: false,
         }),
       );
-      massingEdges.renderOrder = 91;
+      massingEdges.renderOrder = 6;
       this.structureGroup.add(massing, massingEdges);
     }
 
@@ -303,6 +303,9 @@ export class FloorMapViewer {
       target.set(0, 0, 0);
       this.camera.position.set(0, this.buildingHeight + this.transform.depth * 1.15, 0.001);
     } else {
+      // The campus context occupies the old +x/+z approach. Looking from the
+      // opposite corner keeps the classroom building unobscured in the default
+      // composition while the surrounding masses remain legible behind it.
       this.camera.position.set(
         -this.transform.width * 1.15,
         this.buildingHeight * 2.4,
