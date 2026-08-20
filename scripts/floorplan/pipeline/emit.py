@@ -69,7 +69,6 @@ def emit(
             "pages": config["pages"],
             "referenceFloor": config["referenceFloor"],
             "masterRect": rect,
-            "contextRect": config.get("contextRect"),
             "shifts": {floor: list(s) for floor, s in sorted(shifts.items(), key=lambda kv: int(kv[0]))},
             "wallParams": config["walls"],
         },

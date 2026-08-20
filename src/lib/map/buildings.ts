@@ -1,11 +1,12 @@
 import { loadFeatures } from "./features";
-import { loadContextFeatures } from "./context-features";
 import generated from "./toyosu-classroom.generated.json";
 import classroomFeatures from "./toyosu-classroom.features.json";
 import researchGenerated from "./toyosu-research.generated.json";
 import researchFeaturesRaw from "./toyosu-research.features.json";
 import exchangeGenerated from "./toyosu-exchange.generated.json";
 import exchangeFeaturesRaw from "./toyosu-exchange.features.json";
+import headquartersGenerated from "./toyosu-headquarters.generated.json";
+import headquartersFeaturesRaw from "./toyosu-headquarters.features.json";
 import type { BuildingDefinition, BuildingFloor, FloorMeta, WallSegment } from "./types";
 
 const classroomFloorMeta: FloorMeta[] = [
@@ -53,13 +54,6 @@ const features = loadFeatures(
   generated.plan,
   generated.floors.map((floor) => ({ id: floor.id, level: floor.level })),
 );
-const neighbors = loadContextFeatures(
-  generated.buildingId,
-  generated.plan,
-  generated.generated.masterRect,
-  generated.generated.contextRect,
-);
-
 function buildFloors(): BuildingFloor[] {
   return generated.floors.map((floor) => {
     const meta = classroomFloorMeta.find((m) => m.id === floor.id);
@@ -84,12 +78,7 @@ export const toyosuClassroom: BuildingDefinition = {
   plan: generated.plan,
   masterRect: generated.generated.masterRect,
   floors: buildFloors(),
-  features: {
-    ...features.building,
-    neighbors: neighbors.filter(
-      (neighbor) => !["research-building", "exchange-building"].includes(neighbor.id),
-    ),
-  },
+  features: features.building,
 };
 
 const researchFloorMeta: FloorMeta[] = Array.from({ length: 13 }, (_, index) => {
@@ -180,8 +169,58 @@ export const toyosuExchange: BuildingDefinition = {
   features: exchangeFeatures.building,
 };
 
+const headquartersFloorMeta: FloorMeta[] = Array.from({ length: 14 }, (_, index) => {
+  const level = index + 1;
+  return {
+    id: String(level),
+    label: `${level}F`,
+    title: `本部棟 ${level}階`,
+    rooms: level >= 12
+      ? ["本部・管理部門", "会議・共用スペース", "WC", "EV・階段"]
+      : ["教室・事務・研究スペース", "シアター・会議室", "WC", "EV・階段"],
+  };
+});
+
+const headquartersFeatures = loadFeatures(
+  headquartersFeaturesRaw,
+  headquartersGenerated.buildingId,
+  headquartersGenerated.plan,
+  headquartersGenerated.floors.map((floor) => ({ id: floor.id, level: floor.level })),
+  "toyosu-headquarters.features.json",
+);
+
+function buildHeadquartersFloors(): BuildingFloor[] {
+  return headquartersGenerated.floors.map((floor) => {
+    const meta = headquartersFloorMeta.find((item) => item.id === floor.id);
+    if (!meta) throw new Error(`headquarters floor meta missing for "${floor.id}"`);
+    return {
+      ...meta,
+      level: floor.level,
+      texture: floor.texture,
+      walls: floor.walls.map(([x1, z1, x2, z2]): WallSegment => [x1, z1, x2, z2]),
+      features: headquartersFeatures.byFloor[floor.id],
+    };
+  });
+}
+
+export const toyosuHeadquarters: BuildingDefinition = {
+  id: headquartersGenerated.buildingId,
+  name: "本部棟",
+  englishName: "HEADQUARTERS BUILDING",
+  levelsLabel: "1–14F",
+  plan: headquartersGenerated.plan,
+  masterRect: headquartersGenerated.generated.masterRect,
+  floors: buildHeadquartersFloors(),
+  features: headquartersFeatures.building,
+};
+
 export function footprintFor(building: BuildingDefinition, floorId: string): [number, number][] {
   return building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
 }
 
-export const buildings: BuildingDefinition[] = [toyosuClassroom, toyosuResearch, toyosuExchange];
+export const buildings: BuildingDefinition[] = [
+  toyosuClassroom,
+  toyosuResearch,
+  toyosuExchange,
+  toyosuHeadquarters,
+];

@@ -6,7 +6,6 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
 import { buildElevatorShaft } from "./build-features";
-import { buildNeighborMassings } from "./build-context";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
 import { buildingPlacement, LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
@@ -25,7 +24,6 @@ const OPACITY = {
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
 const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
-const NEIGHBOR_OPACITY = { solid: 0.28, edges: 0.12 } as const;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 const BACKGROUND = 0x0b1420;
@@ -44,7 +42,6 @@ const MAP_LAYERS: MapLayer[] = [
   "furniture",
   "outline",
   "shafts",
-  "neighbors",
 ];
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
@@ -137,7 +134,6 @@ export class FloorMapViewer {
   private readonly textures: THREE.Texture[] = [];
   private readonly structureGroup: THREE.Group;
   private readonly shaftGroup: THREE.Group;
-  private readonly neighborGroup: THREE.Group;
   private readonly layerVisibility = Object.fromEntries(
     MAP_LAYERS.map((layer) => [layer, true]),
   ) as Record<MapLayer, boolean>;
@@ -265,8 +261,7 @@ export class FloorMapViewer {
     });
     this.structureGroup = new THREE.Group();
     this.shaftGroup = new THREE.Group();
-    this.neighborGroup = new THREE.Group();
-    this.structureGroup.add(this.shaftGroup, this.neighborGroup);
+    this.structureGroup.add(this.shaftGroup);
     this.scene.add(this.structureGroup);
     const shaftSolid = new THREE.MeshLambertMaterial({
       color: 0x8de4c4,
@@ -293,31 +288,6 @@ export class FloorMapViewer {
         this.shaftGroup.add(column, wires);
       }
     }
-    const neighborGeometry = buildNeighborMassings(buildings.flatMap((building) => building.features.neighbors));
-    if (neighborGeometry) {
-      const massing = new THREE.Mesh(
-        neighborGeometry.solid,
-        new THREE.MeshLambertMaterial({
-          color: 0x527a73,
-          transparent: true,
-          opacity: NEIGHBOR_OPACITY.solid,
-          depthWrite: false,
-        }),
-      );
-      massing.renderOrder = 5;
-      const massingEdges = new THREE.LineSegments(
-        neighborGeometry.edges,
-        new THREE.LineBasicMaterial({
-          color: 0x8aafa5,
-          transparent: true,
-          opacity: NEIGHBOR_OPACITY.edges,
-          depthWrite: false,
-        }),
-      );
-      massingEdges.renderOrder = 6;
-      this.neighborGroup.add(massing, massingEdges);
-    }
-
     if (effects) {
       // samples: 4 is not optional — drawing into a render target disables the
       // context's own antialiasing, and this is what buys v1's edge quality back.
@@ -365,9 +335,8 @@ export class FloorMapViewer {
         this.campusCenter.z + 0.001,
       );
     } else {
-      // The campus context occupies the old +x/+z approach. Looking from the
-      // opposite corner keeps the classroom building unobscured in the default
-      // composition while the surrounding masses remain legible behind it.
+      // Looking from this quadrant keeps all four building stacks legible
+      // without the taller headquarters hiding the lower buildings.
       this.camera.position.set(
         this.campusCenter.x - this.campusWidth * 1.15,
         Math.max(this.buildingHeight * 2.4, Math.max(this.campusWidth, this.campusDepth) * 0.9),
@@ -483,7 +452,6 @@ export class FloorMapViewer {
   private writeStructureVisibility(): void {
     this.structureGroup.visible = !this.debugStack;
     this.shaftGroup.visible = this.layerVisibility.shafts;
-    this.neighborGroup.visible = this.layerVisibility.neighbors;
   }
 
   private renderFrame(): void {

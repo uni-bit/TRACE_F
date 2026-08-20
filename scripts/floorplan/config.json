@@ -4,19 +4,6 @@
   "dpi": 600,
   "referencePage": 61,
   "cyan": { "bMin": 131, "gMin": 81, "rMax": 119, "bOverR": 1.4 },
-  "contextRect": { "x": 600, "y": 1150, "w": 2260, "h": 3220 },
-  "contextEraserRects": [
-    { "x": 760, "y": 1600, "w": 180, "h": 900 },
-    { "x": 2200, "y": 0, "w": 60, "h": 3220 }
-  ],
-  "contextTrace": {
-    "featuresJson": "src/lib/map/toyosu-context.features.json",
-    "geometryJson": "src/lib/map/toyosu-context.generated.json",
-    "closePx": 85,
-    "minContourAreaPx": 20000,
-    "approxEpsilonFrac": 0.004,
-    "maxVertices": 40
-  },
   "walls": {
     "minComponentSide": 60,
     "minComponentArea": 900,
@@ -125,6 +112,31 @@
         "textureDir": "public/floorplans/exchange",
         "texturePattern": "floor-{floor}.png",
         "geometryJson": "src/lib/map/toyosu-exchange.generated.json"
+      }
+    },
+    {
+      "id": "toyosu-headquarters",
+      "name": "本部棟",
+      "pages": {
+        "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64, "7": 65,
+        "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71, "14": 72
+      },
+      "referenceFloor": "3",
+      "masterRect": { "x": 1488, "y": 2959, "w": 1575, "h": 1383 },
+      "templates": [
+        { "name": "east-core-west", "x": 2440, "y": 3090, "w": 105, "h": 260 },
+        { "name": "east-core-east", "x": 2545, "y": 3090, "w": 105, "h": 260 },
+        { "name": "east-core-south", "x": 2440, "y": 3230, "w": 210, "h": 120 }
+      ],
+      "refineWindow": { "x": 1550, "y": 3030, "w": 1120, "h": 1200 },
+      "manualShiftOverride": {},
+      "eraserRects": { "global": [], "perFloor": {} },
+      "walls": { "minSegmentFrac": 0.035 },
+      "featuresJson": "src/lib/map/toyosu-headquarters.features.json",
+      "output": {
+        "textureDir": "public/floorplans/headquarters",
+        "texturePattern": "floor-{floor}.png",
+        "geometryJson": "src/lib/map/toyosu-headquarters.generated.json"
       }
     }
   ]

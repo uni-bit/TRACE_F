@@ -1,7 +1,6 @@
 # Floorplan asset pipeline (豊洲キャンパス複数棟 3Dマップ用)
 
-`config.json` の `buildings` に列挙した各棟のフロアテクスチャと生成ジオメトリ、
-および主棟の参照階から自動トレースする `toyosu-context.generated.json` を、
+`config.json` の `buildings` に列挙した4棟のフロアテクスチャと生成ジオメトリを、
 キャンパスダイアリー2026の PDF から再生成するパイプライン。
 設計の背景は `docs/floor-map-3d.md` を参照。
 
@@ -22,7 +21,7 @@ python scripts/floorplan/build.py --debug
 
 - 依存: Python 3.11+ / Pillow / numpy / opencv-python / PyMuPDF
 - `--debug` で `debug/{building-id}/` に棟別の検証画像を出力(gitignore 済み)
-- `--stage render|register|crop|context|walls|emit` で途中まで実行
+- `--stage render|register|crop|walls|emit` で途中まで実行
 
 ## ステージ
 
@@ -36,17 +35,14 @@ python scripts/floorplan/build.py --debug
 3. **crop** — 棟ごとに基準ページ座標で1つだけ定義した `masterRect` を、各フロアの
    シフト分ずらして切り出す(全フロアが同一座標系・同一アスペクトを共有)。
    宙に浮く注記テキスト・引出線は `eraserRects`(マスター座標)で白塗り。
-   シアン線が切り出し端に触れた場合は矩形不足として警告する。`contextRect` は
-   最初の棟の参照階1枚だけから切り出し、壁抽出には渡さない
-4. **context** — 参照階コンテキストのシアン線を閉じ、連結した棟外形を
-   多角形化。手書きの棟ID・名称・階数・内部点と対応させて生成JSONへ出力
-5. **walls** — `featuresJson` の自階エスカレーター・下階から到達する
+   シアンの長い建物線が切り出し端に触れた場合は矩形不足として警告する
+4. **walls** — `featuresJson` の自階エスカレーター・下階から到達する
    エスカレーター矩形を先にマスクから除外する。階段の短い踏段線は通常の
    最小ラン判定で落ちるため、実壁を分断する広域マスクは掛けない。その後、シアンインクの
    小成分(文字・記号・破線)を除去し、
    方向別クローズ→オープンで長い直線ストロークだけ残し、連結成分ごとに
    1本の中心線セグメントへ。マスター矩形基準で±0.5に正規化
-6. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
+5. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
    ジオメトリ JSON を出力(完全再現可能)
 
 新しい棟を初回生成するときは、縦動線アノテーションがまだ無いため図面記号が
@@ -58,13 +54,13 @@ python scripts/floorplan/build.py --debug
 - `debug/{building-id}/overlay-registration.png` — その棟の全フロアを色分け重畳。
   共有構造(外周壁・階段・EV)が白=全フロア一致なら合格
 - `debug/{building-id}/crop-*.png` — 切り出し結果(=テクスチャ内容)
-- `debug/{primary-id}/context.png` — 主棟参照階だけから切り出した周辺キャンパス範囲
-- `debug/{primary-id}/context-mask.png` / `context-features.png` — 輪郭抽出用マスク / トレース結果の重畳
 - `debug/{building-id}/walls-over-texture-*.png` — 抽出壁(赤)をテクスチャに重畳。
   赤線が図面の壁上にのみ乗っていること
+
+階段記号の細線が壁として残る場合は、その階段だけ `wallMask` を指定して抽出対象から
+除外する。マスクは階段矩形の内側へ絞り、隣接する実壁を消さないこと。
 
 ## パラメータを調整したら
 
 `config.json` の共有パラメータまたは `buildings` 内の棟別設定を編集 → `--debug` で
-再実行 → 上記画像を目視 → 問題なければ各棟の `output` で指定した生成物と、
-主棟の `toyosu-context.generated.json` をコミット。
+再実行 → 上記画像を目視 → 問題なければ各棟の `output` で指定した生成物をコミット。

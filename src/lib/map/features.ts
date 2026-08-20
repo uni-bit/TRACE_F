@@ -188,7 +188,6 @@ export function loadFeatures(
           levels: [lo, hi] as [number, number],
         };
       }),
-      neighbors: [],
     },
     byFloor,
   };

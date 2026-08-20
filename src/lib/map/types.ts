@@ -1,5 +1,5 @@
 export type CameraMode = "orbit" | "north";
-export type MapLayer = "slab" | "plan" | "walls" | "cores" | "furniture" | "outline" | "shafts" | "neighbors";
+export type MapLayer = "slab" | "plan" | "walls" | "cores" | "furniture" | "outline" | "shafts";
 
 /** Wall centerline in plan-normalized coordinates (±0.5, +z = plan down). */
 export type WallSegment = [x1: number, z1: number, x2: number, z2: number];
@@ -91,14 +91,6 @@ export interface ElevatorShaft {
   levels: [number, number];
 }
 
-/** Coarse surrounding-building massing; footprint points are world XZ. */
-export interface NeighborBuilding {
-  id: string;
-  name: string;
-  levels: number;
-  footprint: [number, number][];
-}
-
 export interface FloorFeatures {
   voids: VoidFeature[];
   stairs: StairFeature[];
@@ -111,8 +103,6 @@ export interface BuildingFeatures {
   /** Slab outline per floor; floors without an override use `default`. */
   footprints: { default: [number, number][]; byFloor: Record<string, [number, number][]> };
   elevators: ElevatorShaft[];
-  /** Context only: never participates in floor selection or registration. */
-  neighbors: NeighborBuilding[];
 }
 
 export type BuildingFloor = FloorMeta &

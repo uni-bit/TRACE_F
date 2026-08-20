@@ -67,23 +67,3 @@ export function toWorldZ(nz: number, transform: PlanTransform): number {
 export function planPxToNormalized(px: number, py: number, plan: BuildingPlan): { nx: number; nz: number } {
   return { nx: px / plan.widthPx - 0.5, nz: py / plan.heightPx - 0.5 };
 }
-
-/**
- * Context-crop pixels to the classroom master's world XZ. Both crops use the
- * same registered PDF page, so their page-space origin delta is the complete
- * alignment transform — no second calibration or hand-authored offset.
- */
-export function contextPxToWorld(
-  px: number,
-  py: number,
-  plan: BuildingPlan,
-  masterRect: MasterRect,
-  contextRect: MasterRect,
-): { x: number; z: number } {
-  const transform = planTransform(plan);
-  const scale = transform.width / masterRect.w;
-  return {
-    x: (px + contextRect.x - masterRect.x) * scale - transform.width / 2,
-    z: (py + contextRect.y - masterRect.y) * scale - transform.depth / 2,
-  };
-}

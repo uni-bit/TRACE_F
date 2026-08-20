@@ -1,13 +1,11 @@
-"""Stage 3: crop every floor master plus one reference-floor context.
+"""Stage 3: crop every floor into its building's registered master rectangle.
 
 The master rect is defined once in reference-page coordinates; each floor is
 cropped at rect + that floor's registered shift. All floors therefore share one
 coordinate system and one aspect ratio, and registration accuracy is never
-baked into the output coordinates. A larger context rect is cropped only from
-the registered reference floor for surrounding-building tracing; it is never
-fed to wall extraction. Annotation text and neighbouring-building fragments
-inside the master rect are erased with white rects defined in master-rect
-coordinates (shared or per floor).
+baked into the output coordinates. Annotation text and neighbouring-building
+fragments inside the master rect are erased with white rects defined in
+master-rect coordinates (shared or per floor).
 """
 
 from __future__ import annotations
@@ -33,10 +31,8 @@ def crop_floors(
     pages: dict[str, np.ndarray],
     shifts: dict[str, tuple[int, int]],
     debug: bool = False,
-    include_context: bool = False,
-) -> tuple[dict[str, np.ndarray], np.ndarray | None]:
+) -> dict[str, np.ndarray]:
     rect = config["masterRect"]
-    context_rect = config.get("contextRect") if include_context else None
     debug_dir = building_debug_dir(config)
     erasers = config.get("eraserRects", {})
     crops: dict[str, np.ndarray] = {}
@@ -57,18 +53,4 @@ def crop_floors(
             Image.fromarray(crop).save(debug_dir / f"crop-{floor}.png")
     if debug:
         print(f"    wrote {debug_dir}\\crop-*.png")
-    context_crop = None
-    if context_rect is not None:
-        reference_floor = config["referenceFloor"]
-        dx, dy = shifts[reference_floor]
-        context_crop = crop_padded(
-            pages[reference_floor],
-            context_rect["x"] + dx,
-            context_rect["y"] + dy,
-            context_rect["w"],
-            context_rect["h"],
-        )
-        if debug:
-            Image.fromarray(context_crop).save(debug_dir / "context.png")
-            print(f"    wrote {debug_dir}\\context.png ({reference_floor}F reference only)")
-    return crops, context_crop
+    return crops
