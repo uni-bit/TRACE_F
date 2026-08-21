@@ -48,9 +48,34 @@ def floor_coverage_rows(config: dict, crops: dict[str, np.ndarray]) -> list[dict
                 "outsidePct": outside_pct,
                 "footprintPx": footprint_px,
                 "footprintPct": footprint_pct,
+                "overhangPx": _overhang_px(points, ink),
             }
         )
     return rows
+
+
+def _overhang_px(points: list[list[int]], ink: np.ndarray) -> int:
+    """How far the footprint reaches past the last ink on its worst side.
+
+    Ink outside the footprint is only half the story: a footprint can also run
+    off into blank page, laying slab where the drawing shows nothing, and no
+    amount of ink-outside measurement can see that.  Comparing the two bounding
+    boxes does, and it is the cheap direction of the comparison — the ink box
+    can only be too big (a crop may catch a neighbour's line work), so this
+    under-reports rather than crying wolf.
+    """
+    rows_with_ink, cols_with_ink = np.nonzero(ink)
+    if rows_with_ink.size == 0:
+        return 0
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return max(
+        int(cols_with_ink.min()) - min(xs),
+        max(xs) - int(cols_with_ink.max()),
+        int(rows_with_ink.min()) - min(ys),
+        max(ys) - int(rows_with_ink.max()),
+        0,
+    )
 
 
 def run_coverage_gate(
@@ -64,21 +89,25 @@ def run_coverage_gate(
     page_rows = _page_coverage_rows(config, page_paths, placements)
     floor_limit = float(params["floorMaxOutsideFootprintPct"])
     area_limit = float(params["floorMaxFootprintAreaPct"])
+    overhang_limit = int(params["floorMaxOverhangPx"])
     for row in floor_rows:
         warnings = []
         if row["outsidePct"] > floor_limit:
             warnings.append("outside")
         if row["footprintPct"] > area_limit:
             warnings.append("area")
+        if row["overhangPx"] > overhang_limit:
+            warnings.append("overhang")
         row["status"] = f"WARNING ({'+'.join(warnings)})" if warnings else "OK"
 
     page_table = _page_table(page_rows)
-    floor_table = _floor_table(floor_rows, floor_limit, area_limit)
+    floor_table = _floor_table(floor_rows, floor_limit, area_limit, overhang_limit)
     report = (
         "# Floorplan coverage report\n\n"
         f"Page limit: {int(params['pageMaxUncoveredPx']):,} uncovered px, plus explicit accepted gaps.  "
         f"Floor warning limit: {floor_limit:g}%.  "
         f"Footprint area warning limit: {area_limit:g}% of its crop.  "
+        f"Footprint overhang warning limit: {overhang_limit:,} px past the last ink on any side.  "
         f"Footprint boundary tolerance: {int(params.get('footprintBoundaryTolerancePx', 0))} px "
         "(measurement only; polygons remain on wall centerlines).\n\n"
         "## Page coverage\n\n"
@@ -221,29 +250,35 @@ def _page_table(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _floor_table(rows: list[dict], outside_limit: float, area_limit: float) -> str:
+def _floor_table(
+    rows: list[dict], outside_limit: float, area_limit: float, overhang_limit: int
+) -> str:
     lines = [
-        "| Building | Floor | Cyan px | Outside footprint px | Outside footprint | Footprint area | Status |",
-        "| :--- | ---: | ---: | ---: | ---: | ---: | :--- |",
+        "| Building | Floor | Cyan px | Outside footprint px | Outside footprint | Footprint area | Overhang px | Status |",
+        "| :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |",
     ]
     for row in rows:
         lines.append(
             f"| {row['building']} | {row['floor']}F | {row['cyanPx']:,} | {row['outsidePx']:,} | "
-            f"{row['outsidePct']:.1f}% | {row['footprintPct']:.1f}% | {row['status']} |"
+            f"{row['outsidePct']:.1f}% | {row['footprintPct']:.1f}% | {row['overhangPx']:,} | "
+            f"{row['status']} |"
         )
     building_ids = list(dict.fromkeys(row["buildingId"] for row in rows))
     for building_id in building_ids:
         building_rows = [row for row in rows if row["buildingId"] == building_id]
         outside_average = sum(row["outsidePct"] for row in building_rows) / len(building_rows)
         area_average = sum(row["footprintPct"] for row in building_rows) / len(building_rows)
+        overhang_worst = max(row["overhangPx"] for row in building_rows)
         warnings = []
         if outside_average > outside_limit:
             warnings.append("outside")
         if area_average > area_limit:
             warnings.append("area")
+        if overhang_worst > overhang_limit:
+            warnings.append("overhang")
         status = f"WARNING ({'+'.join(warnings)})" if warnings else "OK"
         lines.append(
             f"| {building_rows[0]['building']} | avg | — | — | {outside_average:.1f}% | "
-            f"{area_average:.1f}% | {status} |"
+            f"{area_average:.1f}% | {overhang_worst:,} (max) | {status} |"
         )
     return "\n".join(lines)

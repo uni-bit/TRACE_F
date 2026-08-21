@@ -3,16 +3,48 @@
   "renderDir": "scripts/floorplan/debug/render",
   "dpi": 600,
   "referencePage": 61,
-  "cyan": { "bMin": 131, "gMin": 81, "rMax": 119, "bOverR": 1.4 },
+  "cyan": {
+    "bMin": 131,
+    "gMin": 81,
+    "rMax": 119,
+    "bOverR": 1.4
+  },
   "pageFurniture": [
-    { "name": "top banner", "rect": [0, 0, 3497, 900] },
-    { "name": "even-page left tabs", "pageParity": "even", "rect": [0, 0, 300, 4961] },
-    { "name": "odd-page right tabs", "pageParity": "odd", "rect": [3050, 0, 3497, 4961] }
+    {
+      "name": "top banner",
+      "rect": [
+        0,
+        0,
+        3497,
+        900
+      ]
+    },
+    {
+      "name": "even-page left tabs",
+      "pageParity": "even",
+      "rect": [
+        0,
+        0,
+        300,
+        4961
+      ]
+    },
+    {
+      "name": "odd-page right tabs",
+      "pageParity": "odd",
+      "rect": [
+        3050,
+        0,
+        3497,
+        4961
+      ]
+    }
   ],
   "coverage": {
     "pageMaxUncoveredPx": 2000,
     "floorMaxOutsideFootprintPct": 8,
     "floorMaxFootprintAreaPct": 85,
+    "floorMaxOverhangPx": 40,
     "footprintBoundaryTolerancePx": 6,
     "acceptedGaps": []
   },
@@ -30,51 +62,192 @@
     "mergeParallelPx": 4,
     "minSegmentFrac": 0.02
   },
-  "texture": { "alphaGain": 2.2, "inkLighten": 0.55, "texelsPerMasterPx": 0.5 },
+  "texture": {
+    "alphaGain": 2.2,
+    "inkLighten": 0.55,
+    "texelsPerMasterPx": 0.5
+  },
   "buildings": [
     {
       "id": "toyosu-classroom",
       "name": "教室棟",
-      "pages": { "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64 },
+      "pages": {
+        "1": 59,
+        "2": 60,
+        "3": 61,
+        "4": 62,
+        "5": 63,
+        "6": 64
+      },
       "referenceFloor": "3",
-      "masterRect": { "x": 632, "y": 1196, "w": 912, "h": 1514 },
+      "masterRect": {
+        "x": 632,
+        "y": 1196,
+        "w": 912,
+        "h": 1514
+      },
       "templates": [
-        { "name": "bottom-stair", "x": 660, "y": 2560, "w": 260, "h": 180 },
-        { "name": "twin-stairs", "x": 920, "y": 1820, "w": 140, "h": 280 },
-        { "name": "top-stair", "x": 700, "y": 1450, "w": 180, "h": 120 }
+        {
+          "name": "bottom-stair",
+          "x": 660,
+          "y": 2560,
+          "w": 260,
+          "h": 180
+        },
+        {
+          "name": "twin-stairs",
+          "x": 920,
+          "y": 1820,
+          "w": 140,
+          "h": 280
+        },
+        {
+          "name": "top-stair",
+          "x": 700,
+          "y": 1450,
+          "w": 180,
+          "h": 120
+        }
       ],
-      "refineWindow": { "x": 652, "y": 1400, "w": 468, "h": 1290 },
+      "refineWindow": {
+        "x": 652,
+        "y": 1400,
+        "w": 468,
+        "h": 1290
+      },
       "manualShiftOverride": {},
       "eraserRects": {
         "global": [],
         "perFloor": {
           "1": [
-            { "x": 0, "y": 170, "w": 220, "h": 105 },
-            { "x": 0, "y": 430, "w": 70, "h": 370 },
-            { "x": 490, "y": 728, "w": 422, "h": 152 },
-            { "x": 730, "y": 918, "w": 182, "h": 88 },
-            { "x": 780, "y": 1028, "w": 132, "h": 84 },
-            { "x": 850, "y": 1278, "w": 62, "h": 236 }
+            {
+              "x": 0,
+              "y": 170,
+              "w": 220,
+              "h": 105
+            },
+            {
+              "x": 0,
+              "y": 430,
+              "w": 70,
+              "h": 370
+            },
+            {
+              "x": 490,
+              "y": 728,
+              "w": 422,
+              "h": 152
+            },
+            {
+              "x": 730,
+              "y": 918,
+              "w": 182,
+              "h": 88
+            },
+            {
+              "x": 780,
+              "y": 1028,
+              "w": 132,
+              "h": 84
+            },
+            {
+              "x": 850,
+              "y": 1278,
+              "w": 62,
+              "h": 236
+            }
           ],
           "2": [
-            { "x": 498, "y": 390, "w": 24, "h": 696 },
-            { "x": 540, "y": 833, "w": 300, "h": 78 },
-            { "x": 770, "y": 938, "w": 142, "h": 72 },
-            { "x": 490, "y": 1078, "w": 422, "h": 80 }
+            {
+              "x": 498,
+              "y": 390,
+              "w": 24,
+              "h": 696
+            },
+            {
+              "x": 540,
+              "y": 833,
+              "w": 300,
+              "h": 78
+            },
+            {
+              "x": 770,
+              "y": 938,
+              "w": 142,
+              "h": 72
+            },
+            {
+              "x": 490,
+              "y": 1078,
+              "w": 422,
+              "h": 80
+            }
           ],
-          "4": [{ "x": 700, "y": 712, "w": 160, "h": 118 }],
+          "4": [
+            {
+              "x": 700,
+              "y": 712,
+              "w": 160,
+              "h": 118
+            }
+          ],
           "5": [
-            { "x": 490, "y": 1090, "w": 422, "h": 310 },
-            { "x": 758, "y": 713, "w": 154, "h": 157 }
+            {
+              "x": 490,
+              "y": 1090,
+              "w": 422,
+              "h": 310
+            },
+            {
+              "x": 758,
+              "y": 713,
+              "w": 154,
+              "h": 157
+            }
           ],
           "6": [
-            { "x": 0, "y": 430, "w": 32, "h": 480 },
-            { "x": 525, "y": 873, "w": 387, "h": 87 },
-            { "x": 536, "y": 472, "w": 20, "h": 403 },
-            { "x": 520, "y": 968, "w": 392, "h": 112 },
-            { "x": 532, "y": 1108, "w": 380, "h": 78 },
-            { "x": 532, "y": 1186, "w": 380, "h": 72 },
-            { "x": 758, "y": 713, "w": 154, "h": 140 }
+            {
+              "x": 0,
+              "y": 430,
+              "w": 32,
+              "h": 480
+            },
+            {
+              "x": 525,
+              "y": 873,
+              "w": 387,
+              "h": 87
+            },
+            {
+              "x": 536,
+              "y": 472,
+              "w": 20,
+              "h": 403
+            },
+            {
+              "x": 520,
+              "y": 968,
+              "w": 392,
+              "h": 112
+            },
+            {
+              "x": 532,
+              "y": 1108,
+              "w": 380,
+              "h": 78
+            },
+            {
+              "x": 532,
+              "y": 1186,
+              "w": 380,
+              "h": 72
+            },
+            {
+              "x": 758,
+              "y": 713,
+              "w": 154,
+              "h": 140
+            }
           ]
         }
       },
@@ -89,39 +262,178 @@
       "id": "toyosu-research",
       "name": "研究棟",
       "pages": {
-        "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64,
-        "7": 65, "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71,
+        "1": 59,
+        "2": 60,
+        "3": 61,
+        "4": 62,
+        "5": 63,
+        "6": 64,
+        "7": 65,
+        "8": 66,
+        "9": 67,
+        "10": 68,
+        "11": 69,
+        "12": 70,
+        "13": 71,
         "14": 72
       },
       "referenceFloor": "3",
-      "masterRect": { "x": 500, "y": 1148, "w": 2356, "h": 829 },
+      "masterRect": {
+        "x": 500,
+        "y": 1148,
+        "w": 2356,
+        "h": 829
+      },
       "templates": [
-        { "name": "north-stair", "x": 2460, "y": 1370, "w": 120, "h": 130 },
-        { "name": "south-stair", "x": 2140, "y": 1580, "w": 160, "h": 180 },
-        { "name": "west-core", "x": 2070, "y": 1420, "w": 150, "h": 210 }
+        {
+          "name": "north-stair",
+          "x": 2460,
+          "y": 1370,
+          "w": 120,
+          "h": 130
+        },
+        {
+          "name": "south-stair",
+          "x": 2140,
+          "y": 1580,
+          "w": 160,
+          "h": 180
+        },
+        {
+          "name": "west-core",
+          "x": 2070,
+          "y": 1420,
+          "w": 150,
+          "h": 210
+        }
       ],
-      "refineWindow": { "x": 2070, "y": 1200, "w": 700, "h": 700 },
+      "refineWindow": {
+        "x": 2070,
+        "y": 1200,
+        "w": 700,
+        "h": 700
+      },
       "manualShiftOverride": {},
       "eraserRects": {
         "global": [],
         "perFloor": {
-          "1": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "2": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "3": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "4": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "5": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "6": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "7": [{ "x": 0, "y": 0, "w": 1500, "h": 829 }],
-          "8": [{ "x": 0, "y": 0, "w": 750, "h": 829 }],
-          "9": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "10": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "11": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "12": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "13": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "14": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }]
+          "1": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "2": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "3": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "4": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "5": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "6": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "7": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1500,
+              "h": 829
+            }
+          ],
+          "8": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 750,
+              "h": 829
+            }
+          ],
+          "9": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ],
+          "10": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ],
+          "11": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ],
+          "12": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ],
+          "13": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ],
+          "14": [
+            {
+              "x": 2300,
+              "y": 0,
+              "w": 56,
+              "h": 829
+            }
+          ]
         }
       },
-      "walls": { "minSegmentFrac": 0.06 },
+      "walls": {
+        "minSegmentFrac": 0.06
+      },
       "featuresJson": "src/lib/map/toyosu-research.features.json",
       "output": {
         "textureDir": "public/floorplans/research",
@@ -132,23 +444,74 @@
     {
       "id": "toyosu-exchange",
       "name": "交流棟（カフェテリア）",
-      "pages": { "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64 },
+      "pages": {
+        "1": 59,
+        "2": 60,
+        "3": 61,
+        "4": 62,
+        "5": 63,
+        "6": 64
+      },
       "referenceFloor": "3",
-      "masterRect": { "x": 791, "y": 2822, "w": 602, "h": 1142 },
+      "masterRect": {
+        "x": 791,
+        "y": 2822,
+        "w": 602,
+        "h": 1142
+      },
       "templates": [
-        { "name": "north-core-west", "x": 1120, "y": 2860, "w": 115, "h": 230 },
-        { "name": "north-core-east", "x": 1235, "y": 2860, "w": 115, "h": 230 },
-        { "name": "north-core-south", "x": 1120, "y": 3000, "w": 230, "h": 100 }
+        {
+          "name": "north-core-west",
+          "x": 1120,
+          "y": 2860,
+          "w": 115,
+          "h": 230
+        },
+        {
+          "name": "north-core-east",
+          "x": 1235,
+          "y": 2860,
+          "w": 115,
+          "h": 230
+        },
+        {
+          "name": "north-core-south",
+          "x": 1120,
+          "y": 3000,
+          "w": 230,
+          "h": 100
+        }
       ],
-      "refineWindow": { "x": 830, "y": 2860, "w": 520, "h": 1000 },
+      "refineWindow": {
+        "x": 830,
+        "y": 2860,
+        "w": 520,
+        "h": 1000
+      },
       "manualShiftOverride": {},
       "eraserRects": {
-        "global": [{ "x": 522, "y": 0, "w": 80, "h": 1142 }],
+        "global": [
+          {
+            "x": 522,
+            "y": 0,
+            "w": 80,
+            "h": 1142
+          }
+        ],
         "perFloor": {
-          "6": [{ "x": 0, "y": 0, "w": 522, "h": 80 }]
+          "6": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 522,
+              "h": 80
+            }
+          ]
         }
       },
-      "walls": { "minSegmentFrac": 0.055 },
+      "walls": {
+        "minSegmentFrac": 0.055
+      },
       "featuresJson": "src/lib/map/toyosu-exchange.features.json",
       "output": {
         "textureDir": "public/floorplans/exchange",
@@ -160,31 +523,98 @@
       "id": "toyosu-headquarters",
       "name": "本部棟",
       "pages": {
-        "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64, "7": 65,
-        "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71, "14": 72
+        "1": 59,
+        "2": 60,
+        "3": 61,
+        "4": 62,
+        "5": 63,
+        "6": 64,
+        "7": 65,
+        "8": 66,
+        "9": 67,
+        "10": 68,
+        "11": 69,
+        "12": 70,
+        "13": 71,
+        "14": 72
       },
       "referenceFloor": "3",
-      "masterRect": { "x": 1488, "y": 2959, "w": 1575, "h": 1383 },
+      "masterRect": {
+        "x": 1488,
+        "y": 2959,
+        "w": 1575,
+        "h": 1383
+      },
       "templates": [
-        { "name": "east-core-west", "x": 2440, "y": 3090, "w": 105, "h": 260 },
-        { "name": "east-core-east", "x": 2545, "y": 3090, "w": 105, "h": 260 },
-        { "name": "east-core-south", "x": 2440, "y": 3230, "w": 210, "h": 120 }
+        {
+          "name": "east-core-west",
+          "x": 2440,
+          "y": 3090,
+          "w": 105,
+          "h": 260
+        },
+        {
+          "name": "east-core-east",
+          "x": 2545,
+          "y": 3090,
+          "w": 105,
+          "h": 260
+        },
+        {
+          "name": "east-core-south",
+          "x": 2440,
+          "y": 3230,
+          "w": 210,
+          "h": 120
+        }
       ],
-      "refineWindow": { "x": 1550, "y": 3030, "w": 1120, "h": 1200 },
+      "refineWindow": {
+        "x": 1550,
+        "y": 3030,
+        "w": 1120,
+        "h": 1200
+      },
       "manualShiftOverride": {},
       "eraserRects": {
         "global": [],
         "perFloor": {
           "9": [
-            { "x": 0, "y": 0, "w": 1575, "h": 60 },
-            { "x": 0, "y": 60, "w": 290, "h": 855 },
-            { "x": 1500, "y": 60, "w": 75, "h": 590 },
-            { "x": 1007, "y": 650, "w": 568, "h": 265 },
-            { "x": 0, "y": 915, "w": 1575, "h": 468 }
+            {
+              "x": 0,
+              "y": 0,
+              "w": 1575,
+              "h": 60
+            },
+            {
+              "x": 0,
+              "y": 60,
+              "w": 290,
+              "h": 855
+            },
+            {
+              "x": 1500,
+              "y": 60,
+              "w": 75,
+              "h": 590
+            },
+            {
+              "x": 1007,
+              "y": 650,
+              "w": 568,
+              "h": 265
+            },
+            {
+              "x": 0,
+              "y": 915,
+              "w": 1575,
+              "h": 468
+            }
           ]
         }
       },
-      "walls": { "minSegmentFrac": 0.035 },
+      "walls": {
+        "minSegmentFrac": 0.035
+      },
       "featuresJson": "src/lib/map/toyosu-headquarters.features.json",
       "output": {
         "textureDir": "public/floorplans/headquarters",
@@ -195,16 +625,41 @@
     {
       "id": "toyosu-shared-west",
       "name": "1F共用部（楽器・倉庫）",
-      "pages": { "1": 59 },
+      "pages": {
+        "1": 59
+      },
       "referenceFloor": "1",
-      "masterRect": { "x": 1561, "y": 2051, "w": 500, "h": 400 },
+      "masterRect": {
+        "x": 1561,
+        "y": 2051,
+        "w": 500,
+        "h": 400
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
-      "manualShiftOverride": { "1": [39, -1] },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "manualShiftOverride": {
+        "1": [
+          39,
+          -1
+        ]
+      },
       "traceFootprints": true,
-      "footprintTrace": { "closePx": 20, "minContourAreaPx": 10000 },
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.08 },
+      "footprintTrace": {
+        "closePx": 20,
+        "minContourAreaPx": 10000
+      },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.08
+      },
       "featuresJson": "src/lib/map/toyosu-shared-west.features.json",
       "output": {
         "textureDir": "public/floorplans/shared-west",
@@ -215,16 +670,41 @@
     {
       "id": "toyosu-shared-east",
       "name": "1F共用部（交流プラザ）",
-      "pages": { "1": 59 },
+      "pages": {
+        "1": 59
+      },
       "referenceFloor": "1",
-      "masterRect": { "x": 2241, "y": 2101, "w": 400, "h": 680 },
+      "masterRect": {
+        "x": 2241,
+        "y": 2101,
+        "w": 400,
+        "h": 680
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
-      "manualShiftOverride": { "1": [39, -1] },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "manualShiftOverride": {
+        "1": [
+          39,
+          -1
+        ]
+      },
       "traceFootprints": true,
-      "footprintTrace": { "closePx": 20, "minContourAreaPx": 10000 },
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.08 },
+      "footprintTrace": {
+        "closePx": 20,
+        "minContourAreaPx": 10000
+      },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.08
+      },
       "featuresJson": "src/lib/map/toyosu-shared-east.features.json",
       "output": {
         "textureDir": "public/floorplans/shared-east",
@@ -235,16 +715,41 @@
     {
       "id": "toyosu-deck",
       "name": "棟間デッキ（キッズパーク・フラワーガーデン）",
-      "pages": { "2": 60 },
+      "pages": {
+        "2": 60
+      },
       "referenceFloor": "2",
-      "masterRect": { "x": 1540, "y": 998, "w": 590, "h": 1600 },
+      "masterRect": {
+        "x": 1540,
+        "y": 998,
+        "w": 590,
+        "h": 1600
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
-      "manualShiftOverride": { "2": [-180, -8] },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "manualShiftOverride": {
+        "2": [
+          -180,
+          -8
+        ]
+      },
       "traceFootprints": true,
-      "footprintTrace": { "closePx": 30, "minContourAreaPx": 20000 },
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.08 },
+      "footprintTrace": {
+        "closePx": 30,
+        "minContourAreaPx": 20000
+      },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.08
+      },
       "featuresJson": "src/lib/map/toyosu-deck.features.json",
       "output": {
         "textureDir": "public/floorplans/deck",
@@ -255,17 +760,57 @@
     {
       "id": "toyosu-west-connector",
       "name": "西側連絡通路",
-      "pages": { "1": 59, "2": 60, "4": 62, "5": 63, "6": 64 },
+      "pages": {
+        "1": 59,
+        "2": 60,
+        "4": 62,
+        "5": 63,
+        "6": 64
+      },
       "referenceFloor": "4",
-      "masterRect": { "x": 690, "y": 2687, "w": 460, "h": 190 },
+      "masterRect": {
+        "x": 690,
+        "y": 2687,
+        "w": 460,
+        "h": 190
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
       "manualShiftOverride": {
-        "1": [9, -7], "2": [-180, -8], "4": [-10, -7], "5": [1, -5], "6": [8, -8]
+        "1": [
+          9,
+          -7
+        ],
+        "2": [
+          -180,
+          -8
+        ],
+        "4": [
+          -10,
+          -7
+        ],
+        "5": [
+          1,
+          -5
+        ],
+        "6": [
+          8,
+          -8
+        ]
       },
       "traceFootprints": true,
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.08 },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.08
+      },
       "featuresJson": "src/lib/map/toyosu-west-connector.features.json",
       "output": {
         "textureDir": "public/floorplans/west-connector",
@@ -276,15 +821,42 @@
     {
       "id": "toyosu-east-connector",
       "name": "東側連絡通路",
-      "pages": { "4": 62, "6": 64 },
+      "pages": {
+        "4": 62,
+        "6": 64
+      },
       "referenceFloor": "4",
-      "masterRect": { "x": 1376, "y": 3034, "w": 130, "h": 140 },
+      "masterRect": {
+        "x": 1376,
+        "y": 3034,
+        "w": 130,
+        "h": 140
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
-      "manualShiftOverride": { "4": [-6, 6], "6": [3, 10] },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "manualShiftOverride": {
+        "4": [
+          -6,
+          6
+        ],
+        "6": [
+          3,
+          10
+        ]
+      },
       "traceFootprints": true,
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.2 },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.2
+      },
       "featuresJson": "src/lib/map/toyosu-east-connector.features.json",
       "output": {
         "textureDir": "public/floorplans/east-connector",
@@ -295,16 +867,41 @@
     {
       "id": "toyosu-roof-garden",
       "name": "教室棟屋上庭園",
-      "pages": { "7": 65 },
+      "pages": {
+        "7": 65
+      },
       "referenceFloor": "7",
-      "masterRect": { "x": 649, "y": 1955, "w": 500, "h": 810 },
+      "masterRect": {
+        "x": 649,
+        "y": 1955,
+        "w": 500,
+        "h": 810
+      },
       "templates": [],
-      "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
-      "manualShiftOverride": { "7": [-9, -5] },
+      "refineWindow": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "manualShiftOverride": {
+        "7": [
+          -9,
+          -5
+        ]
+      },
       "traceFootprints": true,
-      "footprintTrace": { "closePx": 60, "minContourAreaPx": 20000 },
-      "eraserRects": { "global": [], "perFloor": {} },
-      "walls": { "minSegmentFrac": 0.08 },
+      "footprintTrace": {
+        "closePx": 60,
+        "minContourAreaPx": 20000
+      },
+      "eraserRects": {
+        "global": [],
+        "perFloor": {}
+      },
+      "walls": {
+        "minSegmentFrac": 0.08
+      },
       "featuresJson": "src/lib/map/toyosu-roof-garden.features.json",
       "output": {
         "textureDir": "public/floorplans/roof-garden",
