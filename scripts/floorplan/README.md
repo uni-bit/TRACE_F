@@ -21,7 +21,7 @@ python scripts/floorplan/build.py --debug
 
 - 依存: Python 3.11+ / Pillow / numpy / opencv-python / PyMuPDF
 - `--debug` で `debug/{building-id}/` に棟別の検証画像を出力(gitignore 済み)
-- `--stage render|register|crop|walls|emit` で途中まで実行
+- `--stage render|register|crop|coverage|walls|emit` で途中まで実行
 
 ## ステージ
 
@@ -36,13 +36,17 @@ python scripts/floorplan/build.py --debug
    シフト分ずらして切り出す(全フロアが同一座標系・同一アスペクトを共有)。
    宙に浮く注記テキスト・引出線は `eraserRects`(マスター座標)で白塗り。
    シアンの長い建物線が切り出し端に触れた場合は矩形不足として警告する
-4. **walls** — `featuresJson` の自階エスカレーター・下階から到達する
+4. **coverage** — ページ装飾を除くシアンインクが全棟の `masterRect` の外へ
+   落ちていないかをゲートし、各棟・各階のフットプリント外インク率を警告する。
+   標準出力と `debug/coverage/report.md` にページ表・フロア表を出力し、失敗ページは
+   未収録インクを赤、マスター矩形を青で `debug/coverage/page-{n}.png` に重畳する
+5. **walls** — `featuresJson` の自階エスカレーター・下階から到達する
    エスカレーター矩形を先にマスクから除外する。階段の短い踏段線は通常の
    最小ラン判定で落ちるため、実壁を分断する広域マスクは掛けない。その後、シアンインクの
    小成分(文字・記号・破線)を除去し、
    方向別クローズ→オープンで長い直線ストロークだけ残し、連結成分ごとに
    1本の中心線セグメントへ。マスター矩形基準で±0.5に正規化
-5. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
+6. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
    ジオメトリ JSON を出力(完全再現可能)。元の600dpi座標はジオメトリ用に保持しつつ、
    GPUへ展開する全棟のテクスチャを `texture.texelsPerMasterPx` の共通比率で縮小する
 

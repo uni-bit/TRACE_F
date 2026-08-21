@@ -81,7 +81,7 @@ export const toyosuClassroom: BuildingDefinition = {
   features: features.building,
 };
 
-const researchFloorMeta: FloorMeta[] = Array.from({ length: 13 }, (_, index) => {
+const researchFloorMeta: FloorMeta[] = Array.from({ length: 14 }, (_, index) => {
   const level = index + 1;
   return {
     id: String(level),
@@ -117,7 +117,7 @@ export const toyosuResearch: BuildingDefinition = {
   id: researchGenerated.buildingId,
   name: "研究棟",
   englishName: "RESEARCH BUILDING",
-  levelsLabel: "1–13F",
+  levelsLabel: "1–14F",
   plan: researchGenerated.plan,
   masterRect: researchGenerated.generated.masterRect,
   floors: buildResearchFloors(),

@@ -4,6 +4,22 @@
   "dpi": 600,
   "referencePage": 61,
   "cyan": { "bMin": 131, "gMin": 81, "rMax": 119, "bOverR": 1.4 },
+  "pageFurniture": [
+    { "name": "top banner", "rect": [0, 0, 3497, 900] },
+    { "name": "even-page left tabs", "pageParity": "even", "rect": [0, 0, 300, 4961] },
+    { "name": "odd-page right tabs", "pageParity": "odd", "rect": [3050, 0, 3497, 4961] }
+  ],
+  "coverage": {
+    "pageMaxUncoveredPx": 2000,
+    "floorMaxOutsideFootprintPct": 8,
+    "acceptedGaps": [
+      { "page": 59, "reason": "1F unassigned ink deferred to the second coverage pass", "px": 20441 },
+      { "page": 60, "reason": "2F inter-building kids-park / flower-garden deck deferred to the second coverage pass", "px": 48579 },
+      { "page": 62, "reason": "4F classroom-to-research connector and shared research space deferred to the second coverage pass", "px": 2492 },
+      { "page": 64, "reason": "6F classroom-to-research connector deferred to the second coverage pass", "px": 2339 },
+      { "page": 65, "reason": "7F roof garden deferred to the second coverage pass", "px": 16380 }
+    ]
+  },
   "walls": {
     "minComponentSide": 60,
     "minComponentArea": 900,
@@ -72,7 +88,8 @@
       "name": "研究棟",
       "pages": {
         "1": 59, "2": 60, "3": 61, "4": 62, "5": 63, "6": 64,
-        "7": 65, "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71
+        "7": 65, "8": 66, "9": 67, "10": 68, "11": 69, "12": 70, "13": 71,
+        "14": 72
       },
       "referenceFloor": "3",
       "masterRect": { "x": 500, "y": 1148, "w": 2356, "h": 829 },
@@ -98,7 +115,8 @@
           "10": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
           "11": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
           "12": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
-          "13": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }]
+          "13": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }],
+          "14": [{ "x": 2300, "y": 0, "w": 56, "h": 829 }]
         }
       },
       "walls": { "minSegmentFrac": 0.06 },
