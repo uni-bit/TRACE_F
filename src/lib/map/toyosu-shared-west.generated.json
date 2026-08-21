@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-shared-west",
+  "generated": {
+    "generator": "scripts/floorplan/build.py",
+    "date": "2026-08-21",
+    "sourcePdf": "tmp/pdfs/campus-diary-2026-2.pdf",
+    "sourcePdfSha256": "dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318",
+    "dpi": 600,
+    "pages": {
+      "1": 59
+    },
+    "referenceFloor": "1",
+    "masterRect": {
+      "x": 1561,
+      "y": 2051,
+      "w": 500,
+      "h": 400
+    },
+    "shifts": {
+      "1": [
+        39,
+        -1
+      ]
+    },
+    "wallParams": {
+      "minComponentSide": 60,
+      "minComponentArea": 900,
+      "closeGapPx": 12,
+      "minRunPx": 50,
+      "mergeParallelPx": 4,
+      "minSegmentFrac": 0.08
+    },
+    "textureParams": {
+      "alphaGain": 2.2,
+      "inkLighten": 0.55,
+      "texelsPerMasterPx": 0.5
+    }
+  },
+  "plan": {
+    "widthPx": 500,
+    "heightPx": 400
+  },
+  "floors": [
+    {
+      "id": "1",
+      "level": 1,
+      "texture": "/floorplans/shared-west/floor-1.png",
+      "walls": [
+        [
+          -0.45,
+          -0.4375,
+          0.448,
+          -0.4375
+        ],
+        [
+          0.314,
+          -0.31,
+          0.448,
+          -0.31
+        ],
+        [
+          -0.45,
+          -0.3075,
+          0.002,
+          -0.3075
+        ],
+        [
+          -0.45,
+          -0.1775,
+          -0.21,
+          -0.1775
+        ],
+        [
+          -0.45,
+          -0.0875,
+          -0.21,
+          -0.0875
+        ],
+        [
+          -0.002,
+          -0.045,
+          0.448,
+          -0.045
+        ],
+        [
+          -0.002,
+          0.05,
+          0.198,
+          0.05
+        ],
+        [
+          0.192,
+          0.0675,
+          0.448,
+          0.0675
+        ],
+        [
+          -0.45,
+          0.145,
+          0.448,
+          0.145
+        ],
+        [
+          -0.45,
+          0.4375,
+          0.446,
+          0.4375
+        ],
+        [
+          -0.45,
+          -0.435,
+          -0.45,
+          0.445
+        ],
+        [
+          -0.004,
+          -0.435,
+          -0.004,
+          0.445
+        ],
+        [
+          0.312,
+          -0.435,
+          0.312,
+          -0.035
+        ],
+        [
+          0.438,
+          -0.435,
+          0.438,
+          0.445
+        ],
+        [
+          -0.218,
+          -0.305,
+          -0.218,
+          0.1525
+        ]
+      ]
+    }
+  ]
+}

@@ -23,6 +23,15 @@ def floor_coverage_rows(config: dict, crops: dict[str, np.ndarray]) -> list[dict
         points = footprints.get(floor, footprints["default"])
         footprint = np.zeros(crop.shape[:2], dtype=np.uint8)
         cv2.fillPoly(footprint, [np.asarray(points, dtype=np.int32)], 1)
+        # Footprints are deliberately measured on the wall centerline.  Count the
+        # rendered stroke around that centerline as covered without inflating the
+        # slab polygon itself to the wall's outer face.
+        tolerance = int(config["coverage"].get("footprintBoundaryTolerancePx", 0))
+        if tolerance < 0:
+            raise ValueError("coverage.footprintBoundaryTolerancePx must be non-negative")
+        if tolerance:
+            size = tolerance * 2 + 1
+            footprint = cv2.dilate(footprint, np.ones((size, size), dtype=np.uint8))
         ink = cyan_mask(crop, config["cyan"])
         cyan_px = int(np.count_nonzero(ink))
         outside_px = int(np.count_nonzero(ink & (footprint == 0)))
@@ -58,7 +67,9 @@ def run_coverage_gate(
     report = (
         "# Floorplan coverage report\n\n"
         f"Page limit: {int(params['pageMaxUncoveredPx']):,} uncovered px, plus explicit accepted gaps.  "
-        f"Floor warning limit: {floor_limit:g}%.\n\n"
+        f"Floor warning limit: {floor_limit:g}%.  "
+        f"Footprint boundary tolerance: {int(params.get('footprintBoundaryTolerancePx', 0))} px "
+        "(measurement only; polygons remain on wall centerlines).\n\n"
         "## Page coverage\n\n"
         f"{page_table}\n\n"
         "## Floor footprint coverage\n\n"

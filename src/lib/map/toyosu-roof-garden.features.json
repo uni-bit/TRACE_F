@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-roof-garden",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": { "default": [[25, 23], [475, 23], [475, 784], [25, 784]] },
+  "elevators": [],
+  "floors": { "7": {} }
+}

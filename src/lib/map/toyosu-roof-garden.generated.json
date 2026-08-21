@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-roof-garden",
+  "generated": {
+    "generator": "scripts/floorplan/build.py",
+    "date": "2026-08-21",
+    "sourcePdf": "tmp/pdfs/campus-diary-2026-2.pdf",
+    "sourcePdfSha256": "dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318",
+    "dpi": 600,
+    "pages": {
+      "7": 65
+    },
+    "referenceFloor": "7",
+    "masterRect": {
+      "x": 649,
+      "y": 1955,
+      "w": 500,
+      "h": 810
+    },
+    "shifts": {
+      "7": [
+        -9,
+        -5
+      ]
+    },
+    "wallParams": {
+      "minComponentSide": 60,
+      "minComponentArea": 900,
+      "closeGapPx": 12,
+      "minRunPx": 50,
+      "mergeParallelPx": 4,
+      "minSegmentFrac": 0.08
+    },
+    "textureParams": {
+      "alphaGain": 2.2,
+      "inkLighten": 0.55,
+      "texelsPerMasterPx": 0.5
+    }
+  },
+  "plan": {
+    "widthPx": 500,
+    "heightPx": 810
+  },
+  "floors": [
+    {
+      "id": "7",
+      "level": 7,
+      "texture": "/floorplans/roof-garden/floor-7.png",
+      "walls": [
+        [
+          0.124,
+          -0.3037,
+          0.454,
+          -0.3037
+        ],
+        [
+          0.044,
+          -0.2025,
+          0.308,
+          -0.2025
+        ],
+        [
+          -0.446,
+          0.2272,
+          0.048,
+          0.2272
+        ],
+        [
+          0.042,
+          0.2704,
+          0.306,
+          0.2704
+        ],
+        [
+          -0.446,
+          0.3914,
+          0.084,
+          0.3914
+        ],
+        [
+          -0.446,
+          0.4198,
+          0.022,
+          0.4198
+        ],
+        [
+          -0.446,
+          0.4531,
+          -0.336,
+          0.4531
+        ],
+        [
+          -0.344,
+          0.4654,
+          0.45,
+          0.4654
+        ],
+        [
+          -0.444,
+          -0.5,
+          -0.444,
+          0.458
+        ],
+        [
+          0.044,
+          -0.5,
+          0.044,
+          -0.1975
+        ],
+        [
+          0.124,
+          -0.5,
+          0.124,
+          -0.2988
+        ],
+        [
+          0.444,
+          -0.5,
+          0.444,
+          0.4704
+        ],
+        [
+          0.298,
+          -0.2012,
+          0.298,
+          0.2753
+        ],
+        [
+          0.04,
+          0.2284,
+          0.04,
+          0.384
+        ]
+      ]
+    }
+  ]
+}

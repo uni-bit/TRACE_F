@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-shared-east",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": { "default": [[21, 22], [373, 22], [373, 659], [21, 659]] },
+  "elevators": [],
+  "floors": { "1": {} }
+}

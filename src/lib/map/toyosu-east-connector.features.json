@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-east-connector",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": { "default": [[0, 0], [130, 0], [130, 140], [0, 140]] },
+  "elevators": [],
+  "floors": { "4": {}, "6": {} }
+}

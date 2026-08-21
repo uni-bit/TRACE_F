@@ -124,7 +124,9 @@ function addInheritedEscalatorVoids(byFloor: Record<string, FloorFeatures>, floo
   for (const floor of floors) {
     if (floor.level < 2) continue;
     const lower = byLevel.get(floor.level - 1);
-    if (!lower) fail(`floor ${floor.id}: lower level ${floor.level - 1} is missing`);
+    // Independent bridges/decks intentionally contain only the levels on
+    // which the structure exists, so a sparse target can have no lower slab.
+    if (!lower) continue;
 
     for (const escalator of byFloor[lower.id].escalators) {
       let remainder = [escalator.rect];

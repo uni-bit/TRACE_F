@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-east-connector",
+  "generated": {
+    "generator": "scripts/floorplan/build.py",
+    "date": "2026-08-21",
+    "sourcePdf": "tmp/pdfs/campus-diary-2026-2.pdf",
+    "sourcePdfSha256": "dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318",
+    "dpi": 600,
+    "pages": {
+      "4": 62,
+      "6": 64
+    },
+    "referenceFloor": "4",
+    "masterRect": {
+      "x": 1376,
+      "y": 3034,
+      "w": 130,
+      "h": 140
+    },
+    "shifts": {
+      "4": [
+        -6,
+        6
+      ],
+      "6": [
+        3,
+        10
+      ]
+    },
+    "wallParams": {
+      "minComponentSide": 60,
+      "minComponentArea": 900,
+      "closeGapPx": 12,
+      "minRunPx": 50,
+      "mergeParallelPx": 4,
+      "minSegmentFrac": 0.2
+    },
+    "textureParams": {
+      "alphaGain": 2.2,
+      "inkLighten": 0.55,
+      "texelsPerMasterPx": 0.5
+    }
+  },
+  "plan": {
+    "widthPx": 130,
+    "heightPx": 140
+  },
+  "floors": [
+    {
+      "id": "4",
+      "level": 4,
+      "texture": "/floorplans/east-connector/floor-4.png",
+      "walls": [
+        [
+          -0.5,
+          -0.2929,
+          0.5,
+          -0.2929
+        ],
+        [
+          -0.2692,
+          0.1857,
+          0.5,
+          0.1857
+        ]
+      ]
+    },
+    {
+      "id": "6",
+      "level": 6,
+      "texture": "/floorplans/east-connector/floor-6.png",
+      "walls": [
+        [
+          -0.5,
+          -0.2929,
+          0.5,
+          -0.2929
+        ],
+        [
+          -0.5,
+          0.1786,
+          0.5,
+          0.1786
+        ]
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { loadFeatures } from "./features";
+import { loadFeatures, type RawBuildingFeatures } from "./features";
 import generated from "./toyosu-classroom.generated.json";
 import classroomFeatures from "./toyosu-classroom.features.json";
 import researchGenerated from "./toyosu-research.generated.json";
@@ -7,6 +7,18 @@ import exchangeGenerated from "./toyosu-exchange.generated.json";
 import exchangeFeaturesRaw from "./toyosu-exchange.features.json";
 import headquartersGenerated from "./toyosu-headquarters.generated.json";
 import headquartersFeaturesRaw from "./toyosu-headquarters.features.json";
+import sharedWestGenerated from "./toyosu-shared-west.generated.json";
+import sharedWestFeaturesRaw from "./toyosu-shared-west.features.json";
+import sharedEastGenerated from "./toyosu-shared-east.generated.json";
+import sharedEastFeaturesRaw from "./toyosu-shared-east.features.json";
+import deckGenerated from "./toyosu-deck.generated.json";
+import deckFeaturesRaw from "./toyosu-deck.features.json";
+import westConnectorGenerated from "./toyosu-west-connector.generated.json";
+import westConnectorFeaturesRaw from "./toyosu-west-connector.features.json";
+import eastConnectorGenerated from "./toyosu-east-connector.generated.json";
+import eastConnectorFeaturesRaw from "./toyosu-east-connector.features.json";
+import roofGardenGenerated from "./toyosu-roof-garden.generated.json";
+import roofGardenFeaturesRaw from "./toyosu-roof-garden.features.json";
 import type { BuildingDefinition, BuildingFloor, FloorMeta, WallSegment } from "./types";
 
 const classroomFloorMeta: FloorMeta[] = [
@@ -214,6 +226,87 @@ export const toyosuHeadquarters: BuildingDefinition = {
   features: headquartersFeatures.building,
 };
 
+interface StructureGeometry {
+  buildingId: string;
+  plan: { widthPx: number; heightPx: number };
+  generated: { masterRect: { x: number; y: number; w: number; h: number } };
+  floors: { id: string; level: number; texture: string; walls: number[][] }[];
+}
+
+function buildStructure(
+  generatedStructure: StructureGeometry,
+  rawFeatures: RawBuildingFeatures,
+  meta: { name: string; englishName: string; title: string; rooms: string[] },
+): BuildingDefinition {
+  const structureFeatures = loadFeatures(
+    rawFeatures,
+    generatedStructure.buildingId,
+    generatedStructure.plan,
+    generatedStructure.floors.map((floor) => ({ id: floor.id, level: floor.level })),
+  );
+  return {
+    id: generatedStructure.buildingId,
+    name: meta.name,
+    englishName: meta.englishName,
+    levelsLabel: generatedStructure.floors.map((floor) => `${floor.level}F`).join("・"),
+    plan: generatedStructure.plan,
+    masterRect: generatedStructure.generated.masterRect,
+    floors: generatedStructure.floors.map((floor) => ({
+      id: floor.id,
+      label: `${floor.level}F`,
+      title: meta.title,
+      rooms: meta.rooms,
+      level: floor.level,
+      texture: floor.texture,
+      walls: floor.walls.map(([x1, z1, x2, z2]): WallSegment => [x1, z1, x2, z2]),
+      features: structureFeatures.byFloor[floor.id],
+    })),
+    features: structureFeatures.building,
+  };
+}
+
+export const toyosuSharedWest = buildStructure(sharedWestGenerated, sharedWestFeaturesRaw, {
+  name: "1F共用部（楽器・倉庫）",
+  englishName: "SHARED USE WEST",
+  title: "楽器・倉庫共用部",
+  rooms: ["楽器倉庫", "音楽室", "倉庫", "危険物置場"],
+});
+
+export const toyosuSharedEast = buildStructure(sharedEastGenerated, sharedEastFeaturesRaw, {
+  name: "1F共用部（交流プラザ）",
+  englishName: "SHARED USE EAST",
+  title: "交流プラザ共用部",
+  rooms: ["交流プラザ", "校友会事務局", "校友ラウンジ", "有元史郎メモリアルコーナー"],
+});
+
+export const toyosuDeck = buildStructure(deckGenerated, deckFeaturesRaw, {
+  name: "棟間デッキ",
+  englishName: "INTER-BUILDING DECK",
+  title: "シバウラキッズパーク・フラワーガーデン",
+  rooms: ["シバウラキッズパーク", "フラワーガーデン"],
+});
+
+export const toyosuWestConnector = buildStructure(westConnectorGenerated, westConnectorFeaturesRaw, {
+  name: "西側連絡通路",
+  englishName: "WEST CONNECTOR",
+  title: "棟間連絡通路",
+  rooms: ["連絡通路"],
+});
+
+export const toyosuEastConnector = buildStructure(eastConnectorGenerated, eastConnectorFeaturesRaw, {
+  name: "東側連絡通路",
+  englishName: "EAST CONNECTOR",
+  title: "棟間連絡通路",
+  rooms: ["連絡通路"],
+});
+
+export const toyosuRoofGarden = buildStructure(roofGardenGenerated, roofGardenFeaturesRaw, {
+  name: "教室棟屋上庭園",
+  englishName: "CLASSROOM ROOF GARDEN",
+  title: "屋上庭園",
+  rooms: ["屋上庭園"],
+});
+
 export function footprintFor(building: BuildingDefinition, floorId: string): [number, number][] {
   return building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
 }
@@ -223,4 +316,10 @@ export const buildings: BuildingDefinition[] = [
   toyosuResearch,
   toyosuExchange,
   toyosuHeadquarters,
+  toyosuSharedWest,
+  toyosuSharedEast,
+  toyosuDeck,
+  toyosuWestConnector,
+  toyosuEastConnector,
+  toyosuRoofGarden,
 ];

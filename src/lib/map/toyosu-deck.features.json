@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "buildingId": "toyosu-deck",
+  "coordinateSpace": "master-rect-px",
+  "rectFormat": "x0,y0,x1,y1",
+  "footprints": { "default": [[0, 0], [590, 0], [590, 1600], [0, 1600]] },
+  "elevators": [],
+  "floors": { "2": {} }
+}
