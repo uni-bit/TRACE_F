@@ -235,33 +235,21 @@ function escalatorLanes(rect: WorldRect, up: PlanAxis, lanes: number): THREE.Buf
 
 /**
  * The only building-level element: a glass column from the bottom of its lowest
- * floor to the ceiling of its highest, plus the four vertical corner lines. It
+ * floor to the ceiling of its highest. It
  * lives outside the floor groups because those move for selection lift and
  * debugStack, and a shaft that skewers the stack must not move with them.
  */
 export function buildElevatorShaft(
   shaft: ElevatorShaft,
   transform: PlanTransform,
-): { solid: THREE.BufferGeometry; edges: THREE.BufferGeometry } {
+): THREE.BufferGeometry {
   const rect = toWorldRect(shaft.rect, transform);
   const bottom = (shaft.levels[0] - 1) * LEVEL_HEIGHT;
   const top = shaft.levels[1] * LEVEL_HEIGHT;
 
-  const solid = new THREE.BoxGeometry(rect.x1 - rect.x0, top - bottom, rect.z1 - rect.z0);
-  solid.translate((rect.x0 + rect.x1) / 2, (bottom + top) / 2, (rect.z0 + rect.z1) / 2);
-
-  const corners: [number, number][] = [
-    [rect.x0, rect.z0],
-    [rect.x1, rect.z0],
-    [rect.x1, rect.z1],
-    [rect.x0, rect.z1],
-  ];
-  const positions: number[] = [];
-  for (const [x, z] of corners) positions.push(x, bottom, z, x, top, z);
-  const edges = new THREE.BufferGeometry();
-  edges.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-
-  return { solid, edges };
+  const geometry = new THREE.BoxGeometry(rect.x1 - rect.x0, top - bottom, rect.z1 - rect.z0);
+  geometry.translate((rect.x0 + rect.x1) / 2, (bottom + top) / 2, (rect.z0 + rect.z1) / 2);
+  return geometry;
 }
 
 /**

@@ -30,7 +30,7 @@ const DIMMED_STACK_OPACITY = {
   furniture: 0,
 } as const;
 /** The shafts read the same whatever floor is picked — they are the skewer. */
-const SHAFT_OPACITY = { solid: 0.12, edges: 0.3 } as const;
+const SHAFT_OPACITY = 0.12;
 const SELECTED_LIFT = 0.09;
 const MAX_PIXEL_RATIO = 2;
 const BACKGROUND = 0x0b1420;
@@ -279,26 +279,16 @@ export class FloorMapViewer {
     const shaftSolid = new THREE.MeshLambertMaterial({
       color: 0x8de4c4,
       transparent: true,
-      opacity: SHAFT_OPACITY.solid,
-      depthWrite: false,
-    });
-    const shaftEdges = new THREE.LineBasicMaterial({
-      color: 0xd8fff0,
-      transparent: true,
-      opacity: SHAFT_OPACITY.edges,
+      opacity: SHAFT_OPACITY,
       depthWrite: false,
     });
     for (const building of buildings) {
       const placement = placements.get(building.id)!;
       for (const shaft of building.features.elevators) {
-        const { solid, edges } = buildElevatorShaft(shaft, placement.transform);
-        const column = new THREE.Mesh(solid, shaftSolid);
+        const column = new THREE.Mesh(buildElevatorShaft(shaft, placement.transform), shaftSolid);
         column.position.set(placement.offsetX, 0, placement.offsetZ);
         column.renderOrder = 100;
-        const wires = new THREE.LineSegments(edges, shaftEdges);
-        wires.position.copy(column.position);
-        wires.renderOrder = 100;
-        this.shaftGroup.add(column, wires);
+        this.shaftGroup.add(column);
       }
     }
     if (effects) {
