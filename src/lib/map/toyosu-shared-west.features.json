@@ -3,7 +3,28 @@
   "buildingId": "toyosu-shared-west",
   "coordinateSpace": "master-rect-px",
   "rectFormat": "x0,y0,x1,y1",
-  "footprints": { "default": [[22, 24], [472, 24], [472, 376], [22, 376]] },
+  "footprints": {
+    "default": [
+      [
+        24,
+        25
+      ],
+      [
+        24,
+        375
+      ],
+      [
+        472,
+        374
+      ],
+      [
+        471,
+        25
+      ]
+    ]
+  },
   "elevators": [],
-  "floors": { "1": {} }
+  "floors": {
+    "1": {}
+  }
 }

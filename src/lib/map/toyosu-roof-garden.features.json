@@ -3,7 +3,56 @@
   "buildingId": "toyosu-roof-garden",
   "coordinateSpace": "master-rect-px",
   "rectFormat": "x0,y0,x1,y1",
-  "footprints": { "default": [[25, 23], [475, 23], [475, 784], [25, 784]] },
+  "footprints": {
+    "default": [
+      [
+        28,
+        1
+      ],
+      [
+        26,
+        774
+      ],
+      [
+        473,
+        784
+      ],
+      [
+        475,
+        1
+      ],
+      [
+        272,
+        1
+      ],
+      [
+        271,
+        243
+      ],
+      [
+        399,
+        244
+      ],
+      [
+        397,
+        624
+      ],
+      [
+        273,
+        624
+      ],
+      [
+        272,
+        589
+      ],
+      [
+        30,
+        588
+      ]
+    ]
+  },
   "elevators": [],
-  "floors": { "7": {} }
+  "floors": {
+    "7": {}
+  }
 }

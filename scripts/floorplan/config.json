@@ -12,8 +12,15 @@
   "coverage": {
     "pageMaxUncoveredPx": 2000,
     "floorMaxOutsideFootprintPct": 8,
+    "floorMaxFootprintAreaPct": 85,
     "footprintBoundaryTolerancePx": 6,
     "acceptedGaps": []
+  },
+  "footprintTrace": {
+    "closePx": 70,
+    "minContourAreaPx": 5000,
+    "approxEpsilonFrac": 0.004,
+    "maxVertices": 40
   },
   "walls": {
     "minComponentSide": 60,
@@ -194,6 +201,8 @@
       "templates": [],
       "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "manualShiftOverride": { "1": [39, -1] },
+      "traceFootprints": true,
+      "footprintTrace": { "closePx": 20, "minContourAreaPx": 10000 },
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.08 },
       "featuresJson": "src/lib/map/toyosu-shared-west.features.json",
@@ -212,6 +221,8 @@
       "templates": [],
       "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "manualShiftOverride": { "1": [39, -1] },
+      "traceFootprints": true,
+      "footprintTrace": { "closePx": 20, "minContourAreaPx": 10000 },
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.08 },
       "featuresJson": "src/lib/map/toyosu-shared-east.features.json",
@@ -230,6 +241,8 @@
       "templates": [],
       "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "manualShiftOverride": { "2": [-180, -8] },
+      "traceFootprints": true,
+      "footprintTrace": { "closePx": 30, "minContourAreaPx": 20000 },
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.08 },
       "featuresJson": "src/lib/map/toyosu-deck.features.json",
@@ -250,6 +263,7 @@
       "manualShiftOverride": {
         "1": [9, -7], "2": [-180, -8], "4": [-10, -7], "5": [1, -5], "6": [8, -8]
       },
+      "traceFootprints": true,
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.08 },
       "featuresJson": "src/lib/map/toyosu-west-connector.features.json",
@@ -268,6 +282,7 @@
       "templates": [],
       "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "manualShiftOverride": { "4": [-6, 6], "6": [3, 10] },
+      "traceFootprints": true,
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.2 },
       "featuresJson": "src/lib/map/toyosu-east-connector.features.json",
@@ -286,6 +301,8 @@
       "templates": [],
       "refineWindow": { "x": 0, "y": 0, "w": 1, "h": 1 },
       "manualShiftOverride": { "7": [-9, -5] },
+      "traceFootprints": true,
+      "footprintTrace": { "closePx": 60, "minContourAreaPx": 20000 },
       "eraserRects": { "global": [], "perFloor": {} },
       "walls": { "minSegmentFrac": 0.08 },
       "featuresJson": "src/lib/map/toyosu-roof-garden.features.json",

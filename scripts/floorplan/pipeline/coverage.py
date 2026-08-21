@@ -23,6 +23,8 @@ def floor_coverage_rows(config: dict, crops: dict[str, np.ndarray]) -> list[dict
         points = footprints.get(floor, footprints["default"])
         footprint = np.zeros(crop.shape[:2], dtype=np.uint8)
         cv2.fillPoly(footprint, [np.asarray(points, dtype=np.int32)], 1)
+        footprint_px = int(np.count_nonzero(footprint))
+        footprint_pct = 100.0 * footprint_px / footprint.size
         # Footprints are deliberately measured on the wall centerline.  Count the
         # rendered stroke around that centerline as covered without inflating the
         # slab polygon itself to the wall's outer face.
@@ -44,6 +46,8 @@ def floor_coverage_rows(config: dict, crops: dict[str, np.ndarray]) -> list[dict
                 "cyanPx": cyan_px,
                 "outsidePx": outside_px,
                 "outsidePct": outside_pct,
+                "footprintPx": footprint_px,
+                "footprintPct": footprint_pct,
             }
         )
     return rows
@@ -59,15 +63,22 @@ def run_coverage_gate(
     params = config["coverage"]
     page_rows = _page_coverage_rows(config, page_paths, placements)
     floor_limit = float(params["floorMaxOutsideFootprintPct"])
+    area_limit = float(params["floorMaxFootprintAreaPct"])
     for row in floor_rows:
-        row["status"] = "WARNING" if row["outsidePct"] > floor_limit else "OK"
+        warnings = []
+        if row["outsidePct"] > floor_limit:
+            warnings.append("outside")
+        if row["footprintPct"] > area_limit:
+            warnings.append("area")
+        row["status"] = f"WARNING ({'+'.join(warnings)})" if warnings else "OK"
 
     page_table = _page_table(page_rows)
-    floor_table = _floor_table(floor_rows, floor_limit)
+    floor_table = _floor_table(floor_rows, floor_limit, area_limit)
     report = (
         "# Floorplan coverage report\n\n"
         f"Page limit: {int(params['pageMaxUncoveredPx']):,} uncovered px, plus explicit accepted gaps.  "
         f"Floor warning limit: {floor_limit:g}%.  "
+        f"Footprint area warning limit: {area_limit:g}% of its crop.  "
         f"Footprint boundary tolerance: {int(params.get('footprintBoundaryTolerancePx', 0))} px "
         "(measurement only; polygons remain on wall centerlines).\n\n"
         "## Page coverage\n\n"
@@ -210,22 +221,29 @@ def _page_table(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _floor_table(rows: list[dict], warning_limit: float) -> str:
+def _floor_table(rows: list[dict], outside_limit: float, area_limit: float) -> str:
     lines = [
-        "| Building | Floor | Cyan px | Outside footprint px | Outside footprint | Status |",
-        "| :--- | ---: | ---: | ---: | ---: | :--- |",
+        "| Building | Floor | Cyan px | Outside footprint px | Outside footprint | Footprint area | Status |",
+        "| :--- | ---: | ---: | ---: | ---: | ---: | :--- |",
     ]
     for row in rows:
         lines.append(
             f"| {row['building']} | {row['floor']}F | {row['cyanPx']:,} | {row['outsidePx']:,} | "
-            f"{row['outsidePct']:.1f}% | {row['status']} |"
+            f"{row['outsidePct']:.1f}% | {row['footprintPct']:.1f}% | {row['status']} |"
         )
     building_ids = list(dict.fromkeys(row["buildingId"] for row in rows))
     for building_id in building_ids:
         building_rows = [row for row in rows if row["buildingId"] == building_id]
-        average = sum(row["outsidePct"] for row in building_rows) / len(building_rows)
+        outside_average = sum(row["outsidePct"] for row in building_rows) / len(building_rows)
+        area_average = sum(row["footprintPct"] for row in building_rows) / len(building_rows)
+        warnings = []
+        if outside_average > outside_limit:
+            warnings.append("outside")
+        if area_average > area_limit:
+            warnings.append("area")
+        status = f"WARNING ({'+'.join(warnings)})" if warnings else "OK"
         lines.append(
-            f"| {building_rows[0]['building']} | avg | — | — | {average:.1f}% | "
-            f"{'WARNING' if average > warning_limit else 'OK'} |"
+            f"| {building_rows[0]['building']} | avg | — | — | {outside_average:.1f}% | "
+            f"{area_average:.1f}% | {status} |"
         )
     return "\n".join(lines)

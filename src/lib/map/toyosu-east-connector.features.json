@@ -3,7 +3,47 @@
   "buildingId": "toyosu-east-connector",
   "coordinateSpace": "master-rect-px",
   "rectFormat": "x0,y0,x1,y1",
-  "footprints": { "default": [[0, 0], [130, 0], [130, 140], [0, 140]] },
+  "footprints": {
+    "default": [
+      [
+        1,
+        29
+      ],
+      [
+        1,
+        98
+      ],
+      [
+        129,
+        98
+      ],
+      [
+        129,
+        29
+      ]
+    ],
+    "6": [
+      [
+        1,
+        29
+      ],
+      [
+        1,
+        96
+      ],
+      [
+        129,
+        96
+      ],
+      [
+        129,
+        29
+      ]
+    ]
+  },
   "elevators": [],
-  "floors": { "4": {}, "6": {} }
+  "floors": {
+    "4": {},
+    "6": {}
+  }
 }

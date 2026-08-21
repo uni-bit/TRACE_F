@@ -19,6 +19,7 @@ from pipeline.common import building_config, load_config
 from pipeline.coverage import floor_coverage_rows, run_coverage_gate
 from pipeline.crop import crop_floors
 from pipeline.emit import emit
+from pipeline.footprints import trace_floor_footprints
 from pipeline.register import load_page, register_floors
 from pipeline.render import render_pages, source_sha256
 from pipeline.walls import extract_walls
@@ -56,6 +57,8 @@ def main() -> None:
 
         print(f'[{building["id"]}] crop')
         crops = crop_floors(scoped, pages, shifts, debug=args.debug)
+        if scoped.get("traceFootprints", False):
+            trace_floor_footprints(scoped, crops, debug=args.debug)
         coverage_rows.extend(floor_coverage_rows(scoped, crops))
         rect = scoped["masterRect"]
         for floor, page_no in scoped["pages"].items():
