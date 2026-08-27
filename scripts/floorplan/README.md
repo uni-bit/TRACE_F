@@ -8,7 +8,7 @@
 
 | ファイル | 説明 | SHA256 |
 |---|---|---|
-| `tmp/pdfs/campus-diary-2026-2.pdf` | キャンパスダイアリー2026(24MB)。ページ59〜72が対象棟の階別図 | `dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318` |
+| `tmp/pdfs/campus-diary-2026-2.pdf` | キャンパスダイアリー2026(24MB)。ページ58〜72が対象棟の階別図(58が本部棟B1F、59以降が1F〜14F) | `dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318` |
 
 PDF が無い環境では、レンダ済み `scripts/floorplan/debug/render/page-*-600dpi.png`
 があればそこから続行できる(`render` ステージは自動でフォールバック)。
@@ -37,7 +37,10 @@ python scripts/floorplan/build.py --debug
    宙に浮く注記テキスト・引出線は `eraserRects`(マスター座標)で白塗り。
    シアンの長い建物線が切り出し端に触れた場合は矩形不足として警告する
 4. **coverage** — ページ装飾を除くシアンインクが全棟の `masterRect` の外へ
-   落ちていないかをゲートし、各棟・各階のフットプリント外インク率を警告する。
+   落ちていないかをゲートする。許容は `coverage.pageMaxUncoveredPx`(現在100px)。
+   以前の2000pxでは、東側連絡通路(1ページあたり約450px)が棟ごと config から
+   落ちても全ページ PASS のままだった。意図的な未収録は
+   `coverage.acceptedGaps` に理由付きで明示する。さらに各棟・各階のフットプリント外インク率を警告する。
    標準出力と `debug/coverage/report.md` にページ表・フロア表を出力し、失敗ページは
    未収録インクを赤、マスター矩形を青で `debug/coverage/page-{n}.png` に重畳する
 5. **walls** — `featuresJson` の自階エスカレーター・下階から到達する
@@ -46,7 +49,10 @@ python scripts/floorplan/build.py --debug
    小成分(文字・記号・破線)を除去し、
    方向別クローズ→オープンで長い直線ストロークだけ残し、連結成分ごとに
    1本の中心線セグメントへ。マスター矩形基準で±0.5に正規化
-6. **emit** — パレットPNGテクスチャと、生成パラメータ・入力SHA256入りの
+6. **emit** — インクの濃さはアルファ、色相は彩度に比例して保持、明度は
+   `texture.inkValue` の一定値(ビューアのブルーム閾値より下)。この3つを
+   分けないと、図面で最も濃い黒文字が薄く、グレーのピクトグラム地が最も
+   明るく出るという濃淡の逆転が起きる。PNGテクスチャと、生成パラメータ・入力SHA256入りの
    ジオメトリ JSON を出力(完全再現可能)。元の600dpi座標はジオメトリ用に保持しつつ、
    GPUへ展開する全棟のテクスチャを `texture.texelsPerMasterPx` の共通比率で縮小する
 

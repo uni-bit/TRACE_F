@@ -181,17 +181,27 @@ export const toyosuExchange: BuildingDefinition = {
   features: exchangeFeatures.building,
 };
 
-const headquartersFloorMeta: FloorMeta[] = Array.from({ length: 14 }, (_, index) => {
-  const level = index + 1;
-  return {
-    id: String(level),
-    label: `${level}F`,
-    title: `本部棟 ${level}階`,
-    rooms: level >= 12
-      ? ["本部・管理部門", "会議・共用スペース", "WC", "EV・階段"]
-      : ["教室・事務・研究スペース", "シアター・会議室", "WC", "EV・階段"],
-  };
-});
+const headquartersFloorMeta: FloorMeta[] = [
+  {
+    // The only floor on the campus below grade, and the only one whose plan is
+    // not on a 1F-and-up page of the diary (page 58).
+    id: "0",
+    label: "B1F",
+    title: "体育館・アスレチックジム",
+    rooms: ["体育館", "アスレチックジム", "用具庫", "更衣室", "教員控室", "WC", "EV"],
+  },
+  ...Array.from({ length: 14 }, (_, index) => {
+    const level = index + 1;
+    return {
+      id: String(level),
+      label: `${level}F`,
+      title: `本部棟 ${level}階`,
+      rooms: level >= 12
+        ? ["本部・管理部門", "会議・共用スペース", "WC", "EV・階段"]
+        : ["教室・事務・研究スペース", "シアター・会議室", "WC", "EV・階段"],
+    };
+  }),
+];
 
 const headquartersFeatures = loadFeatures(
   headquartersFeaturesRaw,
@@ -219,7 +229,7 @@ export const toyosuHeadquarters: BuildingDefinition = {
   id: headquartersGenerated.buildingId,
   name: "本部棟",
   englishName: "HEADQUARTERS BUILDING",
-  levelsLabel: "1–14F",
+  levelsLabel: "B1–14F",
   plan: headquartersGenerated.plan,
   masterRect: headquartersGenerated.generated.masterRect,
   floors: buildHeadquartersFloors(),
@@ -311,6 +321,7 @@ export function footprintFor(building: BuildingDefinition, floorId: string): [nu
   return building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
 }
 
+/** One entry per region of the drawings; see scripts/floorplan/config.json. */
 export const buildings: BuildingDefinition[] = [
   toyosuClassroom,
   toyosuResearch,
