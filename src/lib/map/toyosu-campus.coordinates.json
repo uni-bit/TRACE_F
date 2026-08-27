@@ -1,0 +1,174 @@
+{
+  "$comment": "WGS84 <-> campus plan-space transform. See docs/floor-map-3d.md #3.2 and trace-campus-installation/docs/coordinate-mapping.md. Do not overwrite a published version; add a new one.",
+  "schemaVersion": 1,
+  "coordinateVersion": "toyosu-2026-08-28.1",
+  "campusId": "shibaura-toyosu",
+  "origin": {
+    "lat": 35.6607341,
+    "lon": 139.7945576,
+    "description": "教室棟1F 南面外壁の自動ドア",
+    "source": "on-site knowledge, NOT the drawing. The campus diary draws no door symbol here. The along-wall position was pointed out on the 1F plan; the across-wall position is snapped to the south exterior wall the drawing does show.",
+    "planPx": {
+      "building": "toyosu-classroom",
+      "floor": "1",
+      "x": 334,
+      "y": 1539
+    },
+    "uncertaintyMetres": {
+      "alongWall": 2.5,
+      "acrossWall": 0.3,
+      "note": "alongWall is how precisely the point was indicated on the plan; acrossWall is the traced wall centreline. Both are on top of the georeference residual below."
+    }
+  },
+  "planToLocal": {
+    "$comment": "Plan metres (x = plan right, z = plan DOWN) -> local ENU metres about the origin. The z flip is the handedness change from a drawing sheet to a right-handed ground frame.",
+    "planOriginMetres": {
+      "x": -7.46,
+      "z": 46.68
+    },
+    "northBearingDeg": 43.0,
+    "formula": [
+      "east  = (x - x0) * cos(b) - (z - z0) * sin(b)",
+      "north = -(x - x0) * sin(b) - (z - z0) * cos(b)"
+    ]
+  },
+  "localToWgs84": {
+    "$comment": "Small-area approximation, the same one coordinate-mapping.md specifies.",
+    "earthRadiusMetres": 6378137.0,
+    "formula": [
+      "lat = lat0 + degrees(north / R)",
+      "lon = lon0 + degrees(east / (R * cos(lat0)))"
+    ]
+  },
+  "scale": {
+    "metresPerUnit": 9.3,
+    "metresPerMasterPx": 0.0611842,
+    "worldUnitsPerPlanWidth": 6.0,
+    "storeyMetres": 4.2,
+    "$comment": "metresPerUnit and storeyMetres are the values in src/lib/map/plan-transform.ts; see docs/floor-map-3d.md #3.1 for the three measurements behind each."
+  },
+  "geofence": {
+    "$comment": "Local ENU metres about the origin. Convex hull of every modelled structure; add margin per coordinate-mapping.md before using it to accept or reject a fix.",
+    "boundingRadiusMetres": 145.0,
+    "hullMetres": [
+      [
+        -49.91,
+        -44.56
+      ],
+      [
+        -36.78,
+        -93.45
+      ],
+      [
+        -9.03,
+        -119.32
+      ],
+      [
+        20.89,
+        -114.77
+      ],
+      [
+        40.86,
+        -110.22
+      ],
+      [
+        132.73,
+        -19.87
+      ],
+      [
+        136.95,
+        -15.44
+      ],
+      [
+        138.16,
+        -14.14
+      ],
+      [
+        144.08,
+        -7.78
+      ],
+      [
+        115.65,
+        35.38
+      ],
+      [
+        105.13,
+        45.19
+      ],
+      [
+        58.78,
+        72.18
+      ],
+      [
+        39.19,
+        69.03
+      ],
+      [
+        -11.8,
+        14.35
+      ],
+      [
+        -12.96,
+        13.01
+      ]
+    ]
+  },
+  "validation": {
+    "method": "The modelled footprints (each building's largest floor plate) were rotated by the plan north bearing and translated to fit OpenStreetMap's outline of the headquarters, with scale held at metresPerUnit rather than solved.",
+    "residuals": [
+      {
+        "target": "OSM way 1290592795 芝浦工業大学 豊洲キャンパス 本部棟",
+        "meanBoundaryDistanceMetres": 2.23,
+        "centroidOffsetMetres": 2.8,
+        "role": "fitted"
+      },
+      {
+        "target": "OSM way 1326184667 有元史郎記念校友会館交流プラザ",
+        "centroidOffsetMetres": 9.6,
+        "role": "independent check",
+        "note": "matched against toyosu-shared-east; areas 713 vs 787 m2"
+      }
+    ],
+    "bearingCorroboration": [
+      {
+        "source": "least-squares fit of this transform",
+        "degrees": 42.0,
+        "note": "residual minimum, 2.15 m"
+      },
+      {
+        "source": "OSM building edges on the block, length-weighted",
+        "degrees": 42.8
+      },
+      {
+        "source": "Hough lines over aerial imagery",
+        "degrees": 43.6
+      },
+      {
+        "source": "model-to-aerial fit",
+        "degrees": 41.9
+      }
+    ],
+    "scaleCorroboration": [
+      {
+        "source": "published 建築面積 4,323.08 m2 vs the traced 4F plate 4,380 m2",
+        "ratio": 1.013
+      },
+      {
+        "source": "OSM outline of the headquarters, 3,822 m2",
+        "ratio": 0.873,
+        "note": "OSM is 11.6% under the published 建築面積, so it is the outline that is small, not the model. Not used to set scale."
+      }
+    ],
+    "notFitted": [
+      "OSM ways 1427091482 and 1427091484 lie 100 m or more north of every modelled structure and are outside the modelled area."
+    ]
+  },
+  "attribution": {
+    "openStreetMap": "Contains information from OpenStreetMap, which is made available under the Open Database License (ODbL). https://www.openstreetmap.org/copyright",
+    "$comment": "Required wherever this transform or anything derived from it is published. Tracked as R-18 in trace-campus-installation/docs/risk-register.md."
+  },
+  "openQuestions": [
+    "The origin is not on the drawing. A single on-site measurement of the door would replace the 2.5 m along-wall uncertainty with a survey figure.",
+    "coordinate-mapping.md asks for three or more validation points with per-point error and a p95. This version has two, both from OSM outlines rather than ground truth."
+  ]
+}
