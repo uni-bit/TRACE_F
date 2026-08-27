@@ -9,33 +9,20 @@ import { buildElevatorShaft } from "./build-features";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
 import { buildingPlacement, LEVEL_HEIGHT, planTransform, type PlanTransform } from "./plan-transform";
+import { DEFAULT_TWEAKS, type MapTweaks } from "./tweaks";
 import type { BuildingDefinition, CameraMode, MapLayer } from "./types";
 
-// The slab tracks the walls one notch below them everywhere: the floor has to
-// read as a solid object (a void is where that object stops), while the walls
-// stay the strongest thing standing on it.
-const OPACITY = {
-  selected: { plan: 1, wall: 0.85, slab: 0.72, outline: 0.55, core: 0.62, furniture: 0.15 },
-  all: { plan: 0.65, wall: 0.4, slab: 0.26, outline: 0.35, core: 0.34, furniture: 0.1 },
-} as const;
-// These are composite targets for the complete stack of unselected floors,
-// not per-floor opacities. Keeping the stack total fixed prevents 37 faint
-// sheets from becoming almost opaque when the campus grows beyond one block.
-const DIMMED_STACK_OPACITY = {
-  plan: 0.08,
-  wall: 0.07,
-  slab: 0.03,
-  outline: 0.08,
-  core: 0,
-  furniture: 0,
-} as const;
+// How every layer reads is a reading decision, not a constant: the whole set
+// lives in tweaks.ts and arrives through setTweaks(), so it can be adjusted
+// against the actual screen instead of guessed here. The values below are only
+// the starting point the panel opens on.
 /** The shafts read the same whatever floor is picked — they are the skewer. */
-const SHAFT_OPACITY = 0.12;
-const SELECTED_LIFT = 0.09;
+const SHAFT_OPACITY = 0.16;
+/** Breathing room around the campus when a camera mode frames it. */
+const FRAME_MARGIN = 1.08;
 const MAX_PIXEL_RATIO = 2;
-const BACKGROUND = 0x0b1420;
-const FOG_DENSITY = 0.018;
-const GROUND_Y = -0.6;
+/** Clearance under the lowest slab, so a basement does not sit in the ground. */
+const GROUND_DROP = 0.15;
 const GROUND_TEXTURE_SIZE = 2048;
 const GROUND_GRID_PITCH = 64;
 /** Frame-rate independent: 60Hz and 120Hz reach the target in the same time. */
@@ -52,6 +39,23 @@ const MAP_LAYERS: MapLayer[] = [
 ];
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
+/** True north in world space, which is what the campus is turned to face. */
+const NORTH_VECTOR = new THREE.Vector3(0, 0, -1);
+/**
+ * Plan space -> world. The world's -z is true north, so the campus group is
+ * turned by minus the plan's north bearing and every plan coordinate that the
+ * camera has to reason about (bounds, centre) comes through here. The bearing
+ * is a tweak, not a constant — PLAN_NORTH_BEARING_DEG is what it is measured
+ * to be, and whether to apply it is a reading decision.
+ */
+function campusYawFor(tweaks: MapTweaks): number {
+  return -THREE.MathUtils.degToRad(tweaks.northBearingDeg);
+}
+function planToWorld(x: number, z: number, yaw: number): { x: number; z: number } {
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
+  return { x: x * cos + z * sin, z: -x * sin + z * cos };
+}
 const FLY_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ShiftLeft", "ShiftRight"]);
 const FLY_SPEED = 2.2;
 const FLY_BOOST = 3;
@@ -145,12 +149,14 @@ export class FloorMapViewer {
   private readonly transform: PlanTransform;
   private readonly floors: FloorHandle[];
   private readonly textures: THREE.Texture[] = [];
+  private readonly campusGroup: THREE.Group;
   private readonly structureGroup: THREE.Group;
   private readonly shaftGroup: THREE.Group;
   private readonly layerVisibility = Object.fromEntries(
     MAP_LAYERS.map((layer) => [layer, true]),
   ) as Record<MapLayer, boolean>;
   private readonly pressed = new Set<string>();
+  private readonly shafts: { column: THREE.Mesh; topLevel: number }[] = [];
   private readonly composer: EffectComposer | null;
   private readonly bloomPass: UnrealBloomPass | null;
   private readonly renderTarget: THREE.WebGLRenderTarget | null;
@@ -159,40 +165,70 @@ export class FloorMapViewer {
   private lastFrame = 0;
   private readonly resizeObserver: ResizeObserver;
   private readonly buildingHeight: number;
+  /** y of the lowest slab: below 0 wherever a building has a basement. */
+  private readonly campusFloorY: number;
   private readonly campusCenter: THREE.Vector3;
-  private readonly campusWidth: number;
-  private readonly campusDepth: number;
+  private campusWidth: number;
+  private campusDepth: number;
+  private readonly planWidth: number;
+  private readonly planDepth: number;
+  /** Plan-space corners of every building, for re-framing when the yaw moves. */
+  private readonly planCorners: { x: number; z: number }[];
+  private tweaks: MapTweaks;
+  private cameraMode: CameraMode = "orbit";
   private raf = 0;
   private needsRender = true;
   private disposed = false;
   private selectedLevel: number | null = null;
   private debugStack = false;
+  private viewListener: ((northScreenAngleDeg: number) => void) | null = null;
+  private lastNorthAngle = Number.NaN;
 
-  constructor(container: HTMLElement, buildings: BuildingDefinition[], effects = true) {
+  constructor(
+    container: HTMLElement,
+    buildings: BuildingDefinition[],
+    effects = true,
+    tweaks: MapTweaks = DEFAULT_TWEAKS,
+  ) {
     if (buildings.length === 0) throw new Error("FloorMapViewer needs at least one building");
+    this.tweaks = structuredClone(tweaks);
+    const yaw = campusYawFor(this.tweaks);
     const primary = buildings[0];
     const placements = new Map(
       buildings.map((building) => [building.id, buildingPlacement(building.masterRect, primary.masterRect)]),
     );
-    const minX = Math.min(...buildings.map((building) => {
+    // Every corner, not the two extremes of an axis-aligned box: once the
+    // campus is turned to true north the plan's own bounding box is no longer
+    // the world's, and framing off it would leave the model cut or adrift.
+    const planCorners = buildings.flatMap((building) => {
       const placement = placements.get(building.id)!;
-      return placement.offsetX - placement.transform.width / 2;
-    }));
-    const maxX = Math.max(...buildings.map((building) => {
-      const placement = placements.get(building.id)!;
-      return placement.offsetX + placement.transform.width / 2;
-    }));
-    const minZ = Math.min(...buildings.map((building) => {
-      const placement = placements.get(building.id)!;
-      return placement.offsetZ - placement.transform.depth / 2;
-    }));
-    const maxZ = Math.max(...buildings.map((building) => {
-      const placement = placements.get(building.id)!;
-      return placement.offsetZ + placement.transform.depth / 2;
-    }));
+      const halfWidth = placement.transform.width / 2;
+      const halfDepth = placement.transform.depth / 2;
+      return [-1, 1].flatMap((sx) =>
+        [-1, 1].map((sz) => ({
+          x: placement.offsetX + sx * halfWidth,
+          z: placement.offsetZ + sz * halfDepth,
+        })),
+      );
+    });
+    this.planCorners = planCorners;
+    const corners = planCorners.map((corner) => planToWorld(corner.x, corner.z, yaw));
+    const minX = Math.min(...corners.map((corner) => corner.x));
+    const maxX = Math.max(...corners.map((corner) => corner.x));
+    const minZ = Math.min(...corners.map((corner) => corner.z));
+    const maxZ = Math.max(...corners.map((corner) => corner.z));
+    const levels = buildings.flatMap((building) => building.floors.map((floor) => floor.level));
     this.container = container;
     this.transform = planTransform(primary.plan);
-    this.buildingHeight = Math.max(...buildings.flatMap((building) => building.floors.map((floor) => floor.level))) * LEVEL_HEIGHT;
+    // Kept alongside the world extents because the orbit viewpoint is chosen
+    // against the buildings, not against the compass: it wants a corner of the
+    // plan, which after the campus is turned is no longer a corner of the world.
+    this.planWidth = Math.max(...planCorners.map((c) => c.x)) - Math.min(...planCorners.map((c) => c.x));
+    this.planDepth = Math.max(...planCorners.map((c) => c.z)) - Math.min(...planCorners.map((c) => c.z));
+    // Levels are not 1..n any more: the headquarters has a basement, so the
+    // stack starts below y=0 and the ground has to get out of its way.
+    this.campusFloorY = (Math.min(...levels) - 1) * LEVEL_HEIGHT;
+    this.buildingHeight = Math.max(...levels) * LEVEL_HEIGHT;
     this.campusCenter = new THREE.Vector3((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
     this.campusWidth = maxX - minX;
     this.campusDepth = maxZ - minZ;
@@ -207,12 +243,20 @@ export class FloorMapViewer {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(BACKGROUND);
-    this.scene.fog = new THREE.FogExp2(BACKGROUND, FOG_DENSITY);
+    this.scene.background = new THREE.Color(this.tweaks.colour.background);
+    this.scene.fog = new THREE.FogExp2(this.tweaks.colour.background, this.tweaks.fogDensity);
     this.scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x1a2030, 0.95));
     const sun = new THREE.DirectionalLight(0xffffff, 0.65);
     sun.position.set(5, 10, 4);
     this.scene.add(sun);
+
+    // Everything modelled hangs off this, and only this is turned: the plan
+    // pipeline keeps working in drawing coordinates while the scene it lands in
+    // has true north down -z. The ground and its grid stay on the scene, so the
+    // grid reads as the compass rose the buildings sit askew on — which they do.
+    this.campusGroup = new THREE.Group();
+    this.campusGroup.rotation.y = yaw;
+    this.scene.add(this.campusGroup);
 
     const groundTexture = createGroundTexture();
     if (groundTexture) {
@@ -227,7 +271,7 @@ export class FloorMapViewer {
         groundGeometry,
         new THREE.MeshBasicMaterial({ map: groundTexture, fog: true, depthWrite: false }),
       );
-      ground.position.y = GROUND_Y;
+      ground.position.y = this.campusFloorY - GROUND_DROP;
       ground.position.x = this.campusCenter.x;
       ground.position.z = this.campusCenter.z;
       ground.renderOrder = -1;
@@ -249,17 +293,15 @@ export class FloorMapViewer {
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
     this.floors = buildings.flatMap((building) => {
       const placement = placements.get(building.id)!;
-      const topLevel = Math.max(...building.floors.map((floor) => floor.level));
       return building.floors.map((floor) => {
         const handle = buildFloorGroup(
           floor,
           placement.transform,
           footprintFor(building, floor.id),
-          floor.level === topLevel,
         );
         handle.group.position.x = placement.offsetX;
         handle.group.position.z = placement.offsetZ;
-        this.scene.add(handle.group);
+        this.campusGroup.add(handle.group);
         const texture = loader.load(floor.texture, () => {
           if (this.disposed) return;
           texture.colorSpace = THREE.SRGBColorSpace;
@@ -275,20 +317,26 @@ export class FloorMapViewer {
     this.structureGroup = new THREE.Group();
     this.shaftGroup = new THREE.Group();
     this.structureGroup.add(this.shaftGroup);
-    this.scene.add(this.structureGroup);
+    this.campusGroup.add(this.structureGroup);
+    // Emissive, not merely lit: a Lambert box this transparent picks up almost
+    // no light against the night ground, so the shafts read as grey monoliths
+    // punched out of the sky instead of glass running through the building.
     const shaftSolid = new THREE.MeshLambertMaterial({
       color: 0x8de4c4,
+      emissive: 0x2f7f68,
       transparent: true,
       opacity: SHAFT_OPACITY,
       depthWrite: false,
     });
     for (const building of buildings) {
       const placement = placements.get(building.id)!;
+      const topLevel = Math.max(...building.floors.map((floor) => floor.level));
       for (const shaft of building.features.elevators) {
         const column = new THREE.Mesh(buildElevatorShaft(shaft, placement.transform), shaftSolid);
         column.position.set(placement.offsetX, 0, placement.offsetZ);
         column.renderOrder = 100;
         this.shaftGroup.add(column);
+        this.shafts.push({ column, topLevel });
       }
     }
     if (effects) {
@@ -322,33 +370,178 @@ export class FloorMapViewer {
     this.raf = requestAnimationFrame(this.renderLoop);
   }
 
+  /**
+   * The whole appearance in one call. Everything here is a material, a pass
+   * setting or a transform — nothing rebuilds geometry — so a slider can be
+   * dragged at frame rate without the GL context noticing.
+   */
+  setTweaks(tweaks: MapTweaks): void {
+    const previousBearing = this.tweaks.northBearingDeg;
+    this.tweaks = structuredClone(tweaks);
+
+    const background = new THREE.Color(this.tweaks.colour.background);
+    if (this.scene.background instanceof THREE.Color) this.scene.background.copy(background);
+    if (this.scene.fog instanceof THREE.FogExp2) {
+      this.scene.fog.color.copy(background);
+      this.scene.fog.density = this.tweaks.fogDensity;
+    }
+    this.renderer.toneMappingExposure = this.tweaks.exposure;
+    if (this.bloomPass) {
+      // Disabled is strength 0 rather than a pass removed: dropping a pass out
+      // of the composer mid-session re-allocates its render targets, and the
+      // only thing the reader asked for was less glow.
+      this.bloomPass.strength = this.tweaks.bloom.enabled ? this.tweaks.bloom.strength : 0;
+      this.bloomPass.radius = this.tweaks.bloom.radius;
+      this.bloomPass.threshold = this.tweaks.bloom.threshold;
+    }
+    for (const floor of this.floors) {
+      floor.slabMaterial.color.set(this.tweaks.colour.slab);
+      floor.wallMaterial.color.set(this.tweaks.colour.wall);
+      floor.outlineMaterial.color.set(this.tweaks.colour.outline);
+      floor.planMaterial.color.set(this.tweaks.colour.plan);
+      floor.coreMaterial?.color.set(this.tweaks.colour.core);
+      floor.furnitureMaterial?.color.set(this.tweaks.colour.furniture);
+    }
+
+    if (this.tweaks.northBearingDeg !== previousBearing) {
+      const yaw = campusYawFor(this.tweaks);
+      this.campusGroup.rotation.y = yaw;
+      const corners = this.planCorners.map((corner) => planToWorld(corner.x, corner.z, yaw));
+      const minX = Math.min(...corners.map((corner) => corner.x));
+      const maxX = Math.max(...corners.map((corner) => corner.x));
+      const minZ = Math.min(...corners.map((corner) => corner.z));
+      const maxZ = Math.max(...corners.map((corner) => corner.z));
+      this.campusCenter.set((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+      this.campusWidth = maxX - minX;
+      this.campusDepth = maxZ - minZ;
+      // The frame was solved against the old footprint; turning the campus
+      // under a camera that is not re-solved leaves it half out of shot.
+      this.setCameraMode(this.cameraMode);
+    }
+
+    this.applyFloorAppearance();
+    this.needsRender = true;
+  }
+
   setSelectedFloor(level: number | null): void {
     this.selectedLevel = level;
     this.applyFloorAppearance();
+    this.writeStructureVisibility();
+  }
+
+  /**
+   * Report where true north ends up on screen, in degrees clockwise from the
+   * top of the viewport, whenever the camera moves. The compass has to be told
+   * rather than assumed: the old rose was painted at 0° and left there, which
+   * was wrong in ORBIT and, before the campus was turned, wrong in NORTH too.
+   */
+  setViewListener(listener: ((northScreenAngleDeg: number) => void) | null): void {
+    this.viewListener = listener;
+    this.lastNorthAngle = Number.NaN;
+    this.emitViewState();
+  }
+
+  private emitViewState(): void {
+    if (!this.viewListener) return;
+    // project() reads matrixWorldInverse, which only the renderer refreshes.
+    // Called straight after a camera move that is one line old, it would
+    // otherwise answer for where the camera used to be.
+    this.camera.updateMatrixWorld();
+    const origin = this.controls.target.clone().project(this.camera);
+    const ahead = this.controls.target.clone().add(NORTH_VECTOR).project(this.camera);
+    const dx = ahead.x - origin.x;
+    const dy = ahead.y - origin.y;
+    // Degenerate only if north is edge-on, which maxPolarAngle rules out.
+    if (dx === 0 && dy === 0) return;
+    const angle = (THREE.MathUtils.radToDeg(Math.atan2(dx, dy)) + 360) % 360;
+    if (Math.abs(angle - this.lastNorthAngle) < 0.5) return;
+    this.lastNorthAngle = angle;
+    this.viewListener(angle);
   }
 
   setCameraMode(mode: CameraMode): void {
+    this.cameraMode = mode;
     const target = this.campusCenter.clone();
-    target.y = this.buildingHeight * 0.35;
     if (mode === "north") {
+      // Plan view: only the footprint has to fit, so frame the ground extent
+      // and leave the target at grade rather than mid-stack. North is up here
+      // because the campus itself is turned, not because the camera is rolled.
       target.y = 0;
-      this.camera.position.set(
-        this.campusCenter.x,
-        this.buildingHeight + Math.max(this.campusWidth, this.campusDepth) * 1.15,
-        this.campusCenter.z + 0.001,
-      );
+      const up = new THREE.Vector3(0, 1, 0.0001).normalize();
+      this.camera.position.copy(target).addScaledVector(up, this.fitDistance(target, up));
     } else {
       // Looking from this quadrant keeps all four building stacks legible
-      // without the taller headquarters hiding the lower buildings.
-      this.camera.position.set(
-        this.campusCenter.x - this.campusWidth * 1.15,
-        Math.max(this.buildingHeight * 2.4, Math.max(this.campusWidth, this.campusDepth) * 0.9),
-        this.campusCenter.z - this.campusDepth * 0.95,
+      // without the taller headquarters hiding the lower buildings. The
+      // quadrant is the plan's, then turned with the campus — the whole point
+      // is which buildings stand in front of which, and that is a fact about
+      // the drawing, not about north. The distance is whatever actually fits
+      // the campus in the viewport we have, so the model is not left as an
+      // island in the middle of a wide frame.
+      target.y = this.buildingHeight * 0.35;
+      const horizontal = planToWorld(
+        -this.planWidth * 1.15,
+        -this.planDepth * 0.95,
+        campusYawFor(this.tweaks),
       );
+      const direction = new THREE.Vector3(
+        horizontal.x,
+        Math.max(this.buildingHeight * 2.4, Math.max(this.campusWidth, this.campusDepth) * 0.9),
+        horizontal.z,
+      ).normalize();
+      this.camera.position
+        .copy(target)
+        .addScaledVector(direction, this.fitDistance(target, direction));
     }
     this.controls.target.copy(target);
     this.controls.update();
     this.needsRender = true;
+    // Ahead of the next frame: the readout belongs to the mode change, not to
+    // whenever the render loop next happens to run.
+    this.emitViewState();
+  }
+
+  /**
+   * Nearest distance along `direction` at which all eight corners of the campus
+   * box still project inside the frustum. A bounding *sphere* would do here and
+   * be one line, but the campus is a wide flat slab, so its circumscribed
+   * sphere is far larger than the silhouette from any real viewing angle — the
+   * camera would sit back far enough to leave the model an island in the middle
+   * of the frame. Both field of views are tested: a wide viewport runs out of
+   * room vertically, a tall one horizontally. Dollying past maxDistance would
+   * silently undo the fit, so that limit moves with it.
+   */
+  private fitDistance(target: THREE.Vector3, direction: THREE.Vector3): number {
+    const vertical = Math.tan(((this.camera.fov * Math.PI) / 180) / 2);
+    const horizontal = vertical * this.camera.aspect;
+    // Straight down has no horizon to take "right" from; on-screen up is -z
+    // there, which the campus's own rotation has made true north.
+    const overhead = Math.abs(direction.dot(WORLD_UP)) > 0.999;
+    const right = overhead
+      ? new THREE.Vector3(1, 0, 0)
+      : new THREE.Vector3().crossVectors(WORLD_UP, direction).normalize();
+    const up = overhead
+      ? new THREE.Vector3(0, 0, -1)
+      : new THREE.Vector3().crossVectors(direction, right).normalize();
+
+    const halfWidth = this.campusWidth / 2;
+    const halfDepth = this.campusDepth / 2;
+    const corner = new THREE.Vector3();
+    let distance = 0;
+    for (const x of [-halfWidth, halfWidth]) {
+      for (const z of [-halfDepth, halfDepth]) {
+        for (const y of [this.campusFloorY, this.buildingHeight]) {
+          corner.set(this.campusCenter.x + x, y, this.campusCenter.z + z).sub(target);
+          const depth = corner.dot(direction);
+          distance = Math.max(
+            distance,
+            depth + (Math.abs(corner.dot(up)) * FRAME_MARGIN) / vertical,
+            depth + (Math.abs(corner.dot(right)) * FRAME_MARGIN) / horizontal,
+          );
+        }
+      }
+    }
+    this.controls.maxDistance = Math.max(this.controls.maxDistance, distance);
+    return distance;
   }
 
   setLayerVisibility(layer: MapLayer, on: boolean): void {
@@ -394,21 +587,22 @@ export class FloorMapViewer {
     const dimmedCount = this.selectedLevel === null
       ? 0
       : this.floors.filter((floor) => floor.level !== this.selectedLevel).length;
+    const stack = this.tweaks.dimmedStack;
     const dimmed = {
-      plan: opacityForStack(DIMMED_STACK_OPACITY.plan, dimmedCount),
-      wall: opacityForStack(DIMMED_STACK_OPACITY.wall, dimmedCount),
-      slab: opacityForStack(DIMMED_STACK_OPACITY.slab, dimmedCount),
-      outline: opacityForStack(DIMMED_STACK_OPACITY.outline, dimmedCount),
-      core: opacityForStack(DIMMED_STACK_OPACITY.core, dimmedCount),
-      furniture: opacityForStack(DIMMED_STACK_OPACITY.furniture, dimmedCount),
+      plan: opacityForStack(stack.plan, dimmedCount),
+      wall: opacityForStack(stack.wall, dimmedCount),
+      slab: opacityForStack(stack.slab, dimmedCount),
+      outline: opacityForStack(stack.outline, dimmedCount),
+      core: opacityForStack(stack.core, dimmedCount),
+      furniture: opacityForStack(stack.furniture, dimmedCount),
     };
     this.floors.forEach((floor, i) => {
       const selected = this.selectedLevel === floor.level;
       const tone =
-        this.selectedLevel === null ? OPACITY.all : selected ? OPACITY.selected : dimmed;
+        this.selectedLevel === null ? this.tweaks.all : selected ? this.tweaks.selected : dimmed;
       this.toneTarget[i] = {
         ...tone,
-        lift: this.debugStack ? 0 : floor.baseY + (selected ? SELECTED_LIFT : 0),
+        lift: this.debugStack ? 0 : floor.baseY + (selected ? this.tweaks.selectedLift : 0),
       };
     });
     this.needsRender = true;
@@ -466,6 +660,13 @@ export class FloorMapViewer {
   private writeStructureVisibility(): void {
     this.structureGroup.visible = !this.debugStack;
     this.shaftGroup.visible = this.layerVisibility.shafts;
+    // Pick a floor above a building's roof and its shaft is the only thing
+    // left of it on screen: a lit column standing over an empty patch of
+    // ground, reading as a mistake rather than as the core of a building that
+    // simply is not this tall. It skewers the floors it actually serves.
+    for (const { column, topLevel } of this.shafts) {
+      column.visible = this.selectedLevel === null || this.selectedLevel <= topLevel;
+    }
   }
 
   private renderFrame(): void {
@@ -488,6 +689,10 @@ export class FloorMapViewer {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.needsRender = true;
+    // Where north lands on screen is a projected direction, so it moves with
+    // the aspect ratio — including the first resize, which is the one that
+    // replaces the 1:1 the camera was constructed with.
+    this.emitViewState();
   }
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
@@ -520,7 +725,7 @@ export class FloorMapViewer {
     if (forward.lengthSq() < 1e-8) {
       // Straight down (NORTH): the horizontal component of the view direction
       // is gone, so steer by the camera's own up axis instead — on screen that
-      // is the top of the viewport, which in NORTH is plan north.
+      // is the top of the viewport, which in NORTH is true north.
       this.camera.updateMatrixWorld();
       forward.setFromMatrixColumn(this.camera.matrixWorld, 1);
       forward.y = 0;
@@ -546,7 +751,7 @@ export class FloorMapViewer {
     target.add(step);
     target.x = clamp(target.x, this.campusCenter.x - this.campusWidth * 2, this.campusCenter.x + this.campusWidth * 2);
     target.z = clamp(target.z, this.campusCenter.z - this.campusDepth * 2, this.campusCenter.z + this.campusDepth * 2);
-    target.y = clamp(target.y, -1, this.buildingHeight + 8);
+    target.y = clamp(target.y, this.campusFloorY - 1, this.buildingHeight + 8);
     // Whatever the clamp actually allowed, not what was asked for.
     this.camera.position.add(target.clone().sub(from));
     this.needsRender = true;
@@ -562,6 +767,7 @@ export class FloorMapViewer {
     if (moved || tweening || this.needsRender) {
       this.needsRender = false;
       this.renderFrame();
+      this.emitViewState();
     }
     this.raf = requestAnimationFrame(this.renderLoop);
   };

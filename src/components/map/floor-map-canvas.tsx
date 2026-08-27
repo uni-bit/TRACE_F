@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { FloorMapViewer } from "@/lib/map/floor-map-viewer";
+import type { MapTweaks } from "@/lib/map/tweaks";
 import type { BuildingDefinition, CameraMode, MapLayer } from "@/lib/map/types";
 
 type FloorMapCanvasProps = {
@@ -13,16 +14,34 @@ type FloorMapCanvasProps = {
   /** ?fx=off bypasses the composer for low-end devices. */
   effects?: boolean;
   layerVisibility?: Record<MapLayer, boolean>;
+  /** Where true north lands on screen, in degrees clockwise from the top. */
+  onNorthAngle?: (degrees: number) => void;
+  tweaks: MapTweaks;
 };
 
-export function FloorMapCanvas({ buildings, selectedLevel, cameraMode, debugStack = false, effects = true, layerVisibility }: FloorMapCanvasProps) {
+export function FloorMapCanvas({ buildings, selectedLevel, cameraMode, debugStack = false, effects = true, layerVisibility, onNorthAngle, tweaks }: FloorMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<FloorMapViewer | null>(null);
+  // Held in a ref so a caller passing an inline function does not tear the
+  // whole GL context down and rebuild it on every render.
+  const northAngleRef = useRef(onNorthAngle);
+  // Same reason: the viewer is built once, so the first tweaks reach it as a
+  // constructor argument and every later change as a set* call.
+  const tweaksRef = useRef(tweaks);
+  useEffect(() => {
+    northAngleRef.current = onNorthAngle;
+  }, [onNorthAngle]);
+
+  useEffect(() => {
+    tweaksRef.current = tweaks;
+    viewerRef.current?.setTweaks(tweaks);
+  }, [tweaks]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const viewer = new FloorMapViewer(container, buildings, effects);
+    const viewer = new FloorMapViewer(container, buildings, effects, tweaksRef.current);
+    viewer.setViewListener((degrees) => northAngleRef.current?.(degrees));
     viewerRef.current = viewer;
     const devWindow = window as Window & { __traceFloorMapViewer?: FloorMapViewer };
     if (process.env.NODE_ENV !== "production") devWindow.__traceFloorMapViewer = viewer;
