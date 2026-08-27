@@ -51,7 +51,8 @@ def _load_symbol_rects(config: dict) -> dict[str, list[tuple[int, int, int, int,
     """Plan symbols are annotations, never wall centerlines.
 
     A floor also displays the escalator arriving from the level below, so its
-    rectangle is excluded alongside that floor's own stairs and escalators.
+    rectangle is excluded alongside that floor's own stairs and escalators,
+    and anything listed in the floor's wallMasks.
     """
     with open(ROOT / config["featuresJson"], encoding="utf-8") as handle:
         features = json.load(handle)["floors"]
@@ -59,11 +60,20 @@ def _load_symbol_rects(config: dict) -> dict[str, list[tuple[int, int, int, int,
     ordered = sorted(features, key=int)
     for index, floor in enumerate(ordered):
         current = features[floor]
-        # Stair treads normally fall below the building-specific run threshold.
-        # A broad stair box would split real enclosure walls, so only long-run
-        # escalator symbols need an explicit rectangular mask here.
-        entries = [({"rect": entry["wallMask"]}, 0) for entry in current.get("stairs", []) if "wallMask" in entry]
+        # Stair treads are short enough to survive once the wall threshold is
+        # lowered for the dense research plans. Mask the annotated stair body,
+        # but leave a small rim so enclosure walls immediately outside the
+        # symbol remain drawable. A per-stair wallMask can still override the
+        # body rectangle when a plan needs a tighter exclusion.
+        entries = [
+            ({"rect": entry.get("wallMask", entry["rect"])}, 8)
+            for entry in current.get("stairs", [])
+        ]
         entries += [(entry, 0) for entry in current.get("escalators", [])]
+        # Drawing that is not wall: vending machines, automatic doors, seating.
+        # Hatched symbols arrive at the extractor as a bundle of long parallel
+        # runs, which is exactly what a wall looks like to it.
+        entries += [(entry, 0) for entry in current.get("wallMasks", [])]
         entries += [
             (entry, -8)
             for entry in current.get("voids", [])
