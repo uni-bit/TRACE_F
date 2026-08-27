@@ -3,7 +3,7 @@
   "buildingId": "toyosu-roof-garden",
   "generated": {
     "generator": "scripts/floorplan/build.py",
-    "date": "2026-08-27",
+    "date": "2026-08-28",
     "sourcePdf": "tmp/pdfs/campus-diary-2026-2.pdf",
     "sourcePdfSha256": "dd7db3837c01ab0eeb0fa3a1667e82841f5d78d53b7b043f4f82fea4ada03318",
     "dpi": 600,
