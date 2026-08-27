@@ -56,6 +56,13 @@ export interface StairFeature {
   rect: NormRect;
   /** Direction of ascent, read from the tread hatching on the plan. */
   up: PlanAxis;
+  /**
+   * The flight leaves this floor going down instead of arriving from it going
+   * up. A deck or bridge whose only slab is its own level still draws the
+   * stair that takes you off it; modelled as a climb it would rise into empty
+   * air above the deck.
+   */
+  down?: boolean;
 }
 
 export interface EscalatorFeature {

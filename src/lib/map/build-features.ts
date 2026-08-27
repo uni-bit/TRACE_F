@@ -78,18 +78,17 @@ const POINTS_AT_MAX = (axis: PlanAxis) => axis === "+x" || axis === "+z";
 /**
  * Stairs and escalators for one floor, merged into a single BufferGeometry so a
  * floor never costs more than one draw call for its vertical circulation.
- * Returns null on the top floor: both reach the storey above, and there is none.
+ * Top-floor plans still contain their stairs and escalators (often serving a
+ * roof or penthouse). Keep them visible; suppressing the entire core made the
+ * 7F/8F circulation symbols disappear from the model.
  */
 export function buildCoreGeometry(
   features: FloorFeatures,
   transform: PlanTransform,
-  isTopFloor: boolean,
 ): THREE.BufferGeometry | null {
-  if (isTopFloor) return null;
-
   const parts: THREE.BufferGeometry[] = [];
   for (const stair of features.stairs) {
-    parts.push(...stairSteps(toWorldRect(stair.rect, transform), stair.up));
+    parts.push(...stairSteps(toWorldRect(stair.rect, transform), stair.up, stair.down === true));
   }
   for (const escalator of features.escalators) {
     parts.push(...escalatorLanes(toWorldRect(escalator.rect, transform), escalator.up, escalator.lanes));
@@ -103,14 +102,17 @@ export function buildCoreGeometry(
 /**
  * The rect is cut into STEPS treads along the axis of ascent; tread i is a box
  * of height (i+1) * LEVEL_HEIGHT / STEPS sitting on y=0, so the flight climbs
- * from this floor's slab to the one above.
+ * from this floor's slab to the one above. A descending flight is the same
+ * solid dropped one storey: it then stands on the level below and its top
+ * tread meets this floor's slab, which is what a stair off a deck looks like.
  */
-function stairSteps(rect: WorldRect, up: PlanAxis): THREE.BufferGeometry[] {
+function stairSteps(rect: WorldRect, up: PlanAxis, down: boolean): THREE.BufferGeometry[] {
   const alongX = IS_X_AXIS(up);
   const spanX = rect.x1 - rect.x0;
   const spanZ = rect.z1 - rect.z0;
   const tread = (alongX ? spanX : spanZ) / STEPS;
   const boxes: THREE.BufferGeometry[] = [];
+  const base = down ? -LEVEL_HEIGHT : 0;
   for (let i = 0; i < STEPS; i += 1) {
     const height = ((i + 1) * LEVEL_HEIGHT) / STEPS;
     const slot = POINTS_AT_MAX(up) ? i : STEPS - 1 - i;
@@ -121,7 +123,7 @@ function stairSteps(rect: WorldRect, up: PlanAxis): THREE.BufferGeometry[] {
     );
     box.translate(
       alongX ? rect.x0 + tread * (slot + 0.5) : (rect.x0 + rect.x1) / 2,
-      height / 2,
+      base + height / 2,
       alongX ? (rect.z0 + rect.z1) / 2 : rect.z0 + tread * (slot + 0.5),
     );
     boxes.push(box);
