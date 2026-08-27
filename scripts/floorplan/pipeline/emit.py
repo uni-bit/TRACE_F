@@ -10,20 +10,43 @@ from PIL import Image
 
 from .common import ROOT
 
+# Below this peak channel an ink pixel carries no usable hue.
+NEUTRAL_INK_LEVEL = 8.0
+
 
 def _blueprint_rgba(rgb: np.ndarray, params: dict) -> np.ndarray:
-    """White paper -> transparent, ink -> lightened color.
+    """White paper -> transparent, ink -> a light tint whose weight is alpha.
 
-    The 3D map renders floors on a dark stage; an opaque white plan reads as a
-    blank card. Alpha from darkness keeps only the drawn ink, and lightening
-    keeps black label text legible against the dark background.
+    The 3D map renders floors on a dark stage, so an opaque white plan reads as
+    a blank card and darkness has to become alpha. The ink's *colour* must not
+    also follow its darkness: lightening each pixel by a fixed fraction of its
+    own value (the previous rule) sent black room labels out darker than the
+    grey pictogram tiles they sit next to, i.e. exactly the reverse of the
+    drawing, where the labels are the densest mark on the sheet. So the value
+    is discarded and only the hue kept -- cyan line work stays blue, neutral
+    ink stays neutral -- and how strongly a mark reads is left entirely to
+    alpha, which is what the drawing's own tone actually means.
     """
-    lum = rgb.astype(np.float32).mean(axis=2) / 255.0
+    rgb = rgb.astype(np.float32)
+    lum = rgb.mean(axis=2) / 255.0
     alpha = np.clip((1.0 - lum) * params["alphaGain"], 0.0, 1.0) * 255.0
-    lighten = params["inkLighten"]
-    out_rgb = 255.0 - (255.0 - rgb.astype(np.float32)) * (1.0 - lighten)
-    rgba = np.dstack([out_rgb, alpha]).astype(np.uint8)
-    return rgba
+    # Near-black has no measurable hue to preserve; treat it as neutral.
+    peak = rgb.max(axis=2, keepdims=True)
+    hue = np.where(peak > NEUTRAL_INK_LEVEL, rgb * (255.0 / np.maximum(peak, 1.0)), 255.0)
+    # ...and hue is only worth keeping in proportion to how coloured the ink
+    # actually was. Normalising every pixel to full value turns the drawing's
+    # warm-black label text into salmon, because the tiny cast in near-neutral
+    # ink gets amplified along with everything else. Chroma decides how far a
+    # pixel travels from white toward its own hue: the cyan line work nearly
+    # all the way, body text almost not at all.
+    chroma = np.where(peak > NEUTRAL_INK_LEVEL, (peak - rgb.min(axis=2, keepdims=True)) / np.maximum(peak, 1.0), 0.0)
+    mix = np.clip(chroma * params["hueGain"], 0.0, 1.0)
+    hue = 255.0 * (1.0 - mix) + hue * mix
+    # One brightness for all ink, set below the viewer's bloom threshold. At
+    # full white the filled pictogram tiles stop being drawing and start being
+    # light sources, blooming over the rooms they label.
+    out_rgb = hue * params["inkValue"]
+    return np.dstack([np.clip(out_rgb, 0.0, 255.0), alpha]).astype(np.uint8)
 
 
 def _fit_texture(img: Image.Image, params: dict) -> Image.Image:
