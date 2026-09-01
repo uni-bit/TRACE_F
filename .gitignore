@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# wifi survey field data (BSSIDs identify where they were recorded)
+/tmp/wifi-survey/
+__pycache__/
