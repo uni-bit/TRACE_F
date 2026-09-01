@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+
+import { withBasePath } from "@/lib/base-path";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useState, type CSSProperties } from "react";
@@ -145,7 +147,7 @@ export function MapScreen() {
           <aside className="map-inspector">
             <div className="inspector-status"><span className="status-check">✓</span><div><span>MODEL STATUS</span><strong>TOYOSU CAMPUS / READY</strong></div></div>
             <div className="version-grid"><div><span>BUILDING</span><strong>{selectedBuilding.name}</strong></div><div><span>LEVELS</span><strong>{selectedBuilding.levelsLabel}</strong></div><div><span>SOURCE</span><strong>CAMPUS DIARY 2026</strong></div></div>
-            {selectedFloor && <div className="floor-detail"><div className="inspector-heading"><span>FLOOR DETAIL / {selectedFloor.label}</span><strong>OFFICIAL 2D PLAN</strong></div><strong className="floor-detail-title">{selectedFloor.title}</strong><Image src={selectedFloor.texture} alt={`${selectedFloor.label} ${selectedBuilding.name}平面図`} width={selectedBuilding.plan.widthPx} height={selectedBuilding.plan.heightPx} /><div className="floor-room-tags">{selectedFloor.rooms.map((room) => <span key={room}>{room}</span>)}</div></div>}
+            {selectedFloor && <div className="floor-detail"><div className="inspector-heading"><span>FLOOR DETAIL / {selectedFloor.label}</span><strong>OFFICIAL 2D PLAN</strong></div><strong className="floor-detail-title">{selectedFloor.title}</strong><Image src={withBasePath(selectedFloor.texture)} unoptimized alt={`${selectedFloor.label} ${selectedBuilding.name}平面図`} width={selectedBuilding.plan.widthPx} height={selectedBuilding.plan.heightPx} /><div className="floor-room-tags">{selectedFloor.rooms.map((room) => <span key={room}>{room}</span>)}</div></div>}
             <div className="inspector-section building-register"><div className="inspector-heading"><span>00 / BUILDING REGISTER</span><strong>ALL BUILDINGS / SELECT</strong></div><p className="inspector-note">全棟の全フロアを公式PDFから棟別の基準枠で切り出し、階段コアを基準に自動で位置合わせしています。棟同士の配置は同じ参照ページ上の誌面座標から算出したもので、測量結果ではありません。図面は建物に正対して描かれているため、真北はステージ上で図面の上方向から{PLAN_NORTH_BEARING_DEG}°ずれています(実測値。コンパスは真北を指します)。スケールは図面1単位≒{METRES_PER_UNIT}m、階高は本部棟の基準階階高4.2mです。壁と縦動線は図面の線・記号に基づき、机・ホワイトボードや共用部の備品は広さを読むための概略表現です。棟を選ぶと右上の2D図面が切り替わります。</p><div className="building-list">{buildingRows}</div></div>
             <div className="inspector-section view-guide"><div className="inspector-heading"><span>01 / VIEW GUIDE</span><strong>READABLE MODE</strong></div><p className="inspector-note">ALLで4棟の全階を重ねて確認できます。階を指定すると、その階を持つすべての棟の図面と壁を強調し、他階を薄く表示します。図面テクスチャと壁は棟ごとに同一の座標系を共有しています。</p><div className="view-guide-keys"><span><i className="guide-wall" />図面壁線</span><span><i className="guide-floor" />階床</span><span><i className="guide-core" />縦動線(階段・EV・エスカレーター)</span><span><i className="guide-void" />吹き抜け(床が抜けている所)</span><span><i className="guide-furniture" />什器(概略)</span></div></div>
           </aside>

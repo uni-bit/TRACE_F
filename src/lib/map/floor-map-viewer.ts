@@ -5,6 +5,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
+import { withBasePath } from "@/lib/base-path";
 import { buildElevatorShaft } from "./build-features";
 import { buildFloorGroup, type FloorHandle } from "./build-floor-group";
 import { footprintFor } from "./buildings";
@@ -302,7 +303,9 @@ export class FloorMapViewer {
         handle.group.position.x = placement.offsetX;
         handle.group.position.z = placement.offsetZ;
         this.campusGroup.add(handle.group);
-        const texture = loader.load(floor.texture, () => {
+        // three.js builds this request itself, so Next's basePath never reaches
+        // it; on a sub-path deployment the raw path would 404 (see base-path.ts).
+        const texture = loader.load(withBasePath(floor.texture), () => {
           if (this.disposed) return;
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.anisotropy = maxAnisotropy;

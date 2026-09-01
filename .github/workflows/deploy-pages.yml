@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+# The survey tool needs HTTPS to be allowed to read a position at all
+# (the Geolocation API is a secure-context feature), and a phone cannot reach a
+# laptop's dev server over HTTPS without certificate work. Pages gives us a
+# hosted origin with a certificate, which is the whole reason this exists.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A half-finished deploy is worse than an old one; let a run finish rather than
+# cancelling it midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build static export
+        env:
+          NEXT_STATIC_EXPORT: "1"
+          # A project site is served from /<repo>, so every asset and route has
+          # to be built with that prefix. `github.event.repository.name` keeps
+          # this correct in a fork, where the repository name is what decides
+          # the URL.
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+        run: npm run build
+      - name: Keep Pages from running the export through Jekyll
+        run: touch out/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
