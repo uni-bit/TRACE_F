@@ -149,3 +149,62 @@ h1 { font-size: clamp(3.1rem, 7.5vw, 6.6rem); letter-spacing: -.075em; line-heig
 .tweak-colours { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px 9px; }
 .tweak-colours label { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.6); font-size: .55rem; }
 .tweak-colours input[type="color"] { width: 26px; height: 18px; padding: 0; border: 1px solid rgba(255,255,255,.2); background: transparent; cursor: pointer; }
+
+/* /survey — field instrument. Read one-handed in daylight, so everything is
+   larger and flatter than the participant screens. */
+.survey { width: min(880px, calc(100% - 20px)); margin: 0 auto; padding: 16px 0 60px; display: grid; gap: 12px; }
+.survey-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.survey-head h1 { margin: 4px 0 6px; font-size: 1.3rem; letter-spacing: -.02em; }
+.survey-sub { margin: 0; max-width: 52ch; color: var(--muted); font-size: .78rem; }
+.survey-sub code, .survey-note code { font-size: .72rem; background: rgba(110,72,229,.08); padding: 1px 5px; border-radius: 4px; }
+.survey-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.survey-error { margin: 0; padding: 10px 12px; border: 1px solid #963f3e; border-radius: 8px; color: #963f3e; background: rgba(150,63,62,.06); font-size: .82rem; }
+.survey-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.survey-card { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-bright); padding: 13px 15px; }
+.survey-card h2 { margin: 0 0 10px; font-size: .95rem; letter-spacing: .03em; }
+.survey-card-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.survey-card-head h2 { margin: 0; }
+.survey-totals { color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; }
+.survey-readout { display: grid; gap: 5px; margin: 0; font-size: .84rem; }
+.survey-readout > div { display: flex; gap: 10px; justify-content: space-between; align-items: baseline; }
+.survey-readout dt { color: var(--muted); font-size: .73rem; flex: none; }
+.survey-readout dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.survey-readout dd small { display: block; color: var(--muted); font-size: .66rem; }
+.survey-readout dd.is-warn, .survey-note.is-warn, .survey-empty.is-warn { color: #963f3e; }
+.survey-empty, .survey-note { margin: 6px 0 0; color: var(--muted); font-size: .76rem; }
+.survey-field { display: grid; gap: 3px; margin-bottom: 9px; }
+.survey-field span { color: var(--muted); font-size: .72rem; }
+.survey-field select, .survey-field input { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: .86rem; }
+.survey-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.survey-row .survey-note { margin: 0; }
+.survey-seconds, .survey-floors, .survey-zoom { display: flex; gap: 5px; align-items: center; }
+.survey-seconds .is-active, .survey-floors .is-active { border-color: var(--violet); color: var(--violet); }
+.survey-zoom span { min-width: 44px; text-align: center; color: var(--muted); font: .7rem/1 monospace; }
+.survey-wide { width: 100%; }
+.survey-sampling { display: grid; gap: 5px; padding: 10px; border: 1px solid var(--violet); border-radius: 8px; background: rgba(110,72,229,.05); font-variant-numeric: tabular-nums; }
+.survey-sampling small { color: var(--muted); font-size: .74rem; }
+
+/* Plan viewer: native scrolling under a fixed crosshair, so the point being
+   aimed at is never under the finger. */
+.survey-floor-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.survey-plan-viewport { height: min(58vh, 520px); overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: #f7f5f2; overscroll-behavior: contain; }
+.survey-plan-canvas { position: relative; cursor: crosshair; }
+.survey-plan-canvas img { display: block; image-rendering: crisp-edges; pointer-events: none; }
+.survey-plan-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.survey-plot-mark line, .survey-plot-mark circle { stroke: var(--coral); fill: none; vector-effect: non-scaling-stroke; }
+.survey-nudge { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 9px; }
+.survey-nudge > span:first-child { color: var(--muted); font-size: .72rem; }
+.survey-nudge-group { display: inline-flex; align-items: center; gap: 3px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 999px; }
+.survey-nudge-group small { color: var(--muted); font: .62rem/1 monospace; margin-left: 2px; }
+.survey-plot-accuracy { fill: rgba(110,72,229,.14); stroke: rgba(110,72,229,.4); stroke-width: 1; }
+.survey-plot-me { fill: var(--violet); stroke: white; stroke-width: 2; }
+.survey-plot-station { fill: none; stroke: var(--ink); stroke-width: 2; }
+
+.survey-table-scroll { overflow-x: auto; }
+.survey-table { width: 100%; border-collapse: collapse; font-size: .79rem; font-variant-numeric: tabular-nums; }
+.survey-table th { text-align: left; padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .69rem; font-weight: 600; white-space: nowrap; }
+.survey-table td { padding: 7px 8px 7px 0; border-bottom: 1px solid rgba(217,211,205,.6); vertical-align: top; }
+.survey-table td small { display: block; color: var(--muted); font-size: .67rem; }
+.survey-table tr.is-worst td { background: rgba(242,139,109,.11); }
+.survey-export { width: 100%; margin-top: 10px; padding: 9px; border: 1px solid var(--line); border-radius: 8px; font: .68rem/1.45 monospace; }
+@media (max-width: 560px) { .survey-actions { width: 100%; } .survey-actions .button { flex: 1; } }
