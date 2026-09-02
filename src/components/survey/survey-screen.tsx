@@ -138,6 +138,7 @@ export function SurveyScreen() {
   const [showExport, setShowExport] = useState(false);
 
   const watchId = useRef<number | null>(null);
+  const lastFix = useRef<Fix | null>(null);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
@@ -164,6 +165,16 @@ export function SurveyScreen() {
 
   const handlePosition = useCallback((position: GeolocationPosition) => {
     const fix = toFix(position);
+    // Core Location re-delivers a held position across several callbacks — the
+    // 9/2 log has four of them 23 ms apart carrying one fix — and each of those
+    // counts once more for every watcher registered. Left in, a fix the device
+    // never re-measured votes several times in the median and collapses the
+    // spread, which is the one number that says how much the position moved.
+    const previous = lastFix.current;
+    if (previous && previous.lat === fix.lat && previous.lon === fix.lon && previous.altitude === fix.altitude) {
+      return;
+    }
+    lastFix.current = fix;
     setLatest(fix);
     setState((current) => appendTrack(current, fix));
     setSampling((current) => (current ? { ...current, fixes: [...current.fixes, fix] } : current));
@@ -174,6 +185,9 @@ export function SurveyScreen() {
       setError("この端末は Geolocation API を持っていません。");
       return;
     }
+    // A second watch on top of a live one doubles every callback and leaks the
+    // first id, so the leaked watch keeps filling the log after "stop".
+    if (watchId.current !== null) navigator.geolocation.clearWatch(watchId.current);
     setError(null);
     setWatching(true);
     watchId.current = navigator.geolocation.watchPosition(
