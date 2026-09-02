@@ -207,3 +207,204 @@ function assertConsistentWithJson(): void {
 }
 
 assertConsistentWithJson();
+
+/* ------------------------------------------------------------------ *
+ * Campus sheet frame
+ *
+ * One building's plan pixels only address that building. A surveyor standing
+ * on the deck, in the cafeteria, or on the paving between them has no pixel to
+ * point at, and a fix taken there lands outside every plan. The sheet frame is
+ * the campus-wide pixel space that fixes both: the PDF page space the master
+ * rectangles are already registered in, which every building's crop is a
+ * window onto. One sheet pixel is METRES_PER_PLAN_PX on the ground, the same
+ * as one classroom plan pixel, because the classroom crop is 1:1 with its
+ * master rectangle (asserted below, along with the same property for every
+ * other building — a rescaled crop would silently shear the composite).
+ * ------------------------------------------------------------------ */
+
+/** Pixels on the campus sheet: origin = SHEET top-left, +y = plan down. */
+export interface CampusPx {
+  x: number;
+  y: number;
+}
+
+export interface CampusRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const PRIMARY_RECT = toyosuClassroom.masterRect;
+/** Ground the surveyor can stand on that no drawing covers — paving, road. */
+const SHEET_MARGIN_METRES = 30;
+
+export function campusPxToMetres(px: CampusPx): PlanMetres {
+  return {
+    x: (px.x - PRIMARY_RECT.x - PRIMARY_RECT.w / 2) * METRES_PER_PLAN_PX,
+    z: (px.y - PRIMARY_RECT.y - PRIMARY_RECT.h / 2) * METRES_PER_PLAN_PX,
+  };
+}
+
+export function metresToCampusPx(metres: PlanMetres): CampusPx {
+  return {
+    x: metres.x / METRES_PER_PLAN_PX + PRIMARY_RECT.x + PRIMARY_RECT.w / 2,
+    y: metres.z / METRES_PER_PLAN_PX + PRIMARY_RECT.y + PRIMARY_RECT.h / 2,
+  };
+}
+
+export function campusPxToLocal(px: CampusPx): LocalEnu {
+  return planMetresToLocal(campusPxToMetres(px));
+}
+
+export function localToCampusPx(local: LocalEnu): CampusPx {
+  return metresToCampusPx(localToPlanMetres(local));
+}
+
+export function campusPxToWgs84(px: CampusPx): Wgs84 {
+  return localToWgs84(campusPxToLocal(px));
+}
+
+/** Sheet pixel -> a pixel on one building's plan image, unclamped. */
+export function campusPxToPlanPx(buildingId: string, px: CampusPx): { x: number; y: number } {
+  return metresToPlanPx(buildingId, campusPxToMetres(px));
+}
+
+export function planPxToCampusPx(point: PlanPoint): CampusPx {
+  return metresToCampusPx(planPxToMetres(point));
+}
+
+/** Normalized plan coordinates (the frame walls and footprints live in). */
+export function planNormToCampusPx(buildingId: string, nx: number, nz: number): CampusPx {
+  return metresToCampusPx(planNormToMetres(buildingId, nx, nz));
+}
+
+/** Where a building's plan image belongs on the sheet. */
+export function buildingSheetRect(buildingId: string): CampusRect {
+  const rect = buildings.find((candidate) => candidate.id === buildingId)?.masterRect;
+  if (!rect) throw new Error(`georeference: unknown building "${buildingId}"`);
+  return { x: rect.x, y: rect.y, width: rect.w, height: rect.h };
+}
+
+/**
+ * Every drawn slab corner on the sheet. The view is fitted to these rather
+ * than to a bounding rectangle: the campus runs on a diagonal, so its upright
+ * rectangle is half empty, and once the sheet is turned to north that empty
+ * half is what decides the zoom.
+ */
+export const CAMPUS_OUTLINE: CampusPx[] = buildings.flatMap((building) =>
+  building.floors.flatMap((floor) => footprintCampusPx(building.id, floor.id)),
+);
+
+/**
+ * The drawn campus plus a margin of undrawn ground, and then whatever of the
+ * geofence still falls outside that. Sized so the surveyor can point at where
+ * they are standing even when that is not on any drawing.
+ */
+export const CAMPUS_SHEET: CampusRect = (() => {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  const grow = (x: number, y: number) => {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  };
+  const margin = SHEET_MARGIN_METRES / METRES_PER_PLAN_PX;
+  for (const building of buildings) {
+    const rect = building.masterRect;
+    grow(rect.x - margin, rect.y - margin);
+    grow(rect.x + rect.w + margin, rect.y + rect.h + margin);
+  }
+  for (const vertex of GEOFENCE_HULL) {
+    const px = localToCampusPx(vertex);
+    grow(px.x, px.y);
+  }
+  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+})();
+
+/** Ray casting; the footprints are concave, so a winding test will not do. */
+function insidePolygon(point: LocalEnu, polygon: LocalEnu[]): boolean {
+  let inside = false;
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index, index += 1) {
+    const a = polygon[index];
+    const b = polygon[previous];
+    if (
+      a.north > point.north !== b.north > point.north &&
+      point.east < ((b.east - a.east) * (point.north - a.north)) / (b.north - a.north) + a.east
+    ) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** One building's slab outline for a floor, in ground coordinates. */
+export function footprintLocal(buildingId: string, floorId: string): LocalEnu[] {
+  const building = buildings.find((candidate) => candidate.id === buildingId);
+  if (!building) throw new Error(`georeference: unknown building "${buildingId}"`);
+  const outline = building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
+  return outline.map(([nx, nz]) => planMetresToLocal(planNormToMetres(buildingId, nx, nz)));
+}
+
+/** The same outline on the campus sheet, for drawing rather than testing. */
+export function footprintCampusPx(buildingId: string, floorId: string): CampusPx[] {
+  const building = buildings.find((candidate) => candidate.id === buildingId);
+  if (!building) throw new Error(`georeference: unknown building "${buildingId}"`);
+  const outline = building.features.footprints.byFloor[floorId] ?? building.features.footprints.default;
+  return outline.map(([nx, nz]) => metresToCampusPx(planNormToMetres(buildingId, nx, nz)));
+}
+
+/**
+ * Which structures a ground position falls inside.
+ *
+ * Containment is horizontal, so without a level the answer stacks: the roof
+ * garden sits on the classroom building and the deck spans the paving between
+ * the towers, and a point can be inside all of them at once. Passing the level
+ * cuts the stack to the structures that have a floor there, which is what
+ * makes "教室棟" rather than "教室棟屋上庭園" the answer on 1F.
+ */
+export function structuresAt(local: LocalEnu, level?: number): string[] {
+  return buildings
+    .filter((building) => {
+      const floor =
+        level === undefined ? building.floors[0] : building.floors.find((candidate) => candidate.level === level);
+      return floor !== undefined && insidePolygon(local, footprintLocal(building.id, floor.id));
+    })
+    .map((building) => building.id);
+}
+
+/**
+ * The sheet frame assumes each crop is 1:1 with its master rectangle, and that
+ * arithmetic on the sheet is the same arithmetic `planPxToMetres` does per
+ * building. Both are properties of generated data, so both are checked here
+ * rather than trusted: a rescaled crop would put a building metres away from
+ * where its own plan pixels say it is, and nothing downstream would notice.
+ */
+function assertSheetFrame(): void {
+  for (const building of buildings) {
+    if (building.masterRect.w !== building.plan.widthPx || building.masterRect.h !== building.plan.heightPx) {
+      throw new Error(
+        `georeference: ${building.id} crop ${building.plan.widthPx}x${building.plan.heightPx} is not 1:1 with its master rect ${building.masterRect.w}x${building.masterRect.h}`,
+      );
+    }
+    const corner = { buildingId: building.id, x: building.plan.widthPx, y: building.plan.heightPx };
+    const viaPlan = planPxToMetres(corner);
+    const viaSheet = campusPxToMetres({
+      x: building.masterRect.x + building.masterRect.w,
+      y: building.masterRect.y + building.masterRect.h,
+    });
+    // Not exact: the sheet works in the JSON's published metres-per-pixel,
+    // which is rounded, while the plan frame carries the pipeline's full
+    // precision. That is a fifth of a millimetre across the whole campus. The
+    // failure this guards against — a crop rescaled away from its master rect —
+    // is metres, so the tolerance is set where nothing real hides under it.
+    if (Math.abs(viaPlan.x - viaSheet.x) > 0.01 || Math.abs(viaPlan.z - viaSheet.z) > 0.01) {
+      throw new Error(`georeference: sheet frame disagrees with the plan frame for ${building.id}`);
+    }
+  }
+}
+
+assertSheetFrame();

@@ -178,27 +178,66 @@ h1 { font-size: clamp(3.1rem, 7.5vw, 6.6rem); letter-spacing: -.075em; line-heig
 .survey-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .survey-row .survey-note { margin: 0; }
 .survey-seconds, .survey-floors, .survey-zoom { display: flex; gap: 5px; align-items: center; }
-.survey-seconds .is-active, .survey-floors .is-active { border-color: var(--violet); color: var(--violet); }
+.survey-seconds .is-active, .survey-floors .is-active, .campus-plan-jumps .is-active { border-color: var(--violet); color: var(--violet); }
 .survey-zoom span { min-width: 44px; text-align: center; color: var(--muted); font: .7rem/1 monospace; }
 .survey-wide { width: 100%; }
 .survey-sampling { display: grid; gap: 5px; padding: 10px; border: 1px solid var(--violet); border-radius: 8px; background: rgba(110,72,229,.05); font-variant-numeric: tabular-nums; }
 .survey-sampling small { color: var(--muted); font-size: .74rem; }
 
-/* Plan viewer: native scrolling under a fixed crosshair, so the point being
-   aimed at is never under the finger. */
+/* Campus plan: one pannable, pinchable sheet carrying every building's plate.
+   The transform is driven by pointer events rather than a scrollbox, because a
+   scrollbox swallows the pinch and leaves a phone with no way to zoom. */
 .survey-floor-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.survey-plan-viewport { height: min(58vh, 520px); overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: #f7f5f2; overscroll-behavior: contain; }
-.survey-plan-canvas { position: relative; cursor: crosshair; }
-.survey-plan-canvas img { display: block; image-rendering: crisp-edges; pointer-events: none; }
-.survey-plan-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.survey-plot-mark line, .survey-plot-mark circle { stroke: var(--coral); fill: none; vector-effect: non-scaling-stroke; }
+.survey-floors { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
+.survey-floors .small-button { flex: none; }
+.campus-plan-tools { position: absolute; left: 8px; bottom: 8px; right: 8px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.campus-plan-tools .small-button, .campus-plan-tools .survey-zoom { background: rgba(255,255,255,.92); }
+.campus-plan-tools .survey-zoom { border-radius: 999px; padding: 0 2px; }
+.campus-plan-jumps { display: flex; gap: 5px; }
+.campus-plan-viewport { position: relative; height: min(62vh, 560px); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #f2efeb; touch-action: none; cursor: crosshair; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; }
+/* The sheet carries no box of its own: it is 3500x4300 sheet pixels wide, and
+   Chromium will not rasterize a turned element that large — the plates come
+   out blank white. Everything on it is absolutely positioned against this
+   point, so a zero-sized origin is all it has to be. For the same reason there
+   is no `will-change: transform`: promoting it would ask the compositor for a
+   texture the size of the whole sheet. */
+.campus-plan-sheet { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+.campus-plan-slab { fill: #fdfcfb; stroke: rgba(38,33,29,.55); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.campus-plan-slab.is-ghost { fill: rgba(253,252,251,.5); stroke: rgba(38,33,29,.18); }
+.campus-plan-overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+.campus-plan-walls { fill: none; stroke: rgba(31,86,150,.85); stroke-width: 1.1; stroke-linecap: square; vector-effect: non-scaling-stroke; }
+.campus-plan-geofence { fill: rgba(110,72,229,.04); stroke: rgba(110,72,229,.45); stroke-width: 1.5; stroke-dasharray: 10 8; vector-effect: non-scaling-stroke; }
+.campus-plan-label { fill: rgba(38,33,29,.45); font-weight: 700; text-anchor: middle; letter-spacing: .08em; }
+.campus-plan-hint { margin-top: 7px; }
+.campus-plan-compass { position: absolute; right: 10px; top: 10px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.82); border: 1px solid var(--line); pointer-events: none; }
+.campus-plan-compass svg { position: absolute; width: 26px; height: 26px; }
+.campus-plan-compass line { stroke: rgba(38,33,29,.45); stroke-width: 1.5; }
+.campus-plan-compass polygon { fill: var(--coral); }
+.campus-plan-compass span { position: absolute; bottom: 1px; font: 700 .5rem/1 sans-serif; color: var(--muted); }
+
+/* Markers live in screen space, not in the drawing: a position outside the
+   sheet has to stay visible, and `overflow: hidden` would eat it. */
+.campus-plan-pin { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+.campus-plan-pin svg { display: block; overflow: visible; }
+.campus-plan-pin.is-mark line, .campus-plan-pin.is-mark circle { stroke: var(--coral); stroke-width: 1.6; fill: none; }
+.campus-plan-dot { display: block; width: 15px; height: 15px; border-radius: 50%; background: var(--violet); border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.campus-plan-pin.is-off .campus-plan-dot { border-radius: 3px; transform: rotate(45deg); }
+.campus-plan-pin.is-off.is-mark svg { opacity: .55; }
+.campus-plan-chip { position: absolute; top: 50%; margin-top: 13px; white-space: nowrap; padding: 2px 7px; border-radius: 999px; background: rgba(38,33,29,.88); color: #fff; font: .64rem/1.5 monospace; }
+.campus-plan-chip.is-left { left: -9px; }
+.campus-plan-chip.is-right { right: -9px; }
+.campus-plan-chip.is-above { top: auto; bottom: 50%; margin: 0 0 13px; }
+.campus-plan-pin.is-mark .campus-plan-chip { background: var(--coral); }
 .survey-nudge { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 9px; }
 .survey-nudge > span:first-child { color: var(--muted); font-size: .72rem; }
 .survey-nudge-group { display: inline-flex; align-items: center; gap: 3px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 999px; }
 .survey-nudge-group small { color: var(--muted); font: .62rem/1 monospace; margin-left: 2px; }
 .survey-plot-accuracy { fill: rgba(110,72,229,.14); stroke: rgba(110,72,229,.4); stroke-width: 1; }
 .survey-plot-me { fill: var(--violet); stroke: white; stroke-width: 2; }
-.survey-plot-station { fill: none; stroke: var(--ink); stroke-width: 2; }
+.survey-plot-station { fill: none; stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.survey-plot-station.is-other-level { stroke: rgba(38,33,29,.3); stroke-dasharray: 4 3; }
+.survey-plot-accuracy { vector-effect: non-scaling-stroke; }
+.survey-baseline-actions { margin-top: 10px; }
 
 .survey-table-scroll { overflow-x: auto; }
 .survey-table { width: 100%; border-collapse: collapse; font-size: .79rem; font-variant-numeric: tabular-nums; }

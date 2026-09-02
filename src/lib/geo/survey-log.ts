@@ -1,4 +1,4 @@
-import { toyosuClassroom } from "@/lib/map/buildings";
+import { levelLabel, toyosuClassroom } from "@/lib/map/buildings";
 import {
   COORDINATE_VERSION,
   bearingDeg,
@@ -58,7 +58,19 @@ export const TRUTH_CONFIDENCE: Record<TruthConfidence, { label: string; metres: 
 export interface GroundTruth {
   floorId: string;
   level: number;
-  /** Plan pixels in the classroom building's 912x1552 coordinate space. */
+  /**
+   * Which structure the point was pointed at on, for reading the log back.
+   * Absent on stations recorded before the plan went campus-wide, and never
+   * part of the arithmetic: `x`/`y` alone fix the position.
+   */
+  buildingId?: string;
+  /**
+   * Plan pixels in the classroom building's 912x1552 coordinate space, which
+   * is an affine frame over the whole campus rather than a window onto one
+   * drawing — a point on the headquarters is simply a large pixel value. Kept
+   * as the stored frame so logs written before the plan went campus-wide, and
+   * `scripts/geo/fit-survey.mjs`, read unchanged.
+   */
   x: number;
   y: number;
   confidence: TruthConfidence;
@@ -81,6 +93,29 @@ export interface SurveyState {
   stations: Station[];
   track: Fix[];
   trackTruncated: boolean;
+  /**
+   * Optional, so a log written before floor estimation existed still loads
+   * (`loadSurvey` spreads it over a fresh state) without a schema bump.
+   */
+  floorBaseline?: FloorBaseline | null;
+}
+
+/**
+ * What altitude reads at a known floor on this device, at this place, today.
+ *
+ * A GNSS altitude is height above the WGS84 ellipsoid, which near Toyosu sits
+ * about 36 m below the geoid, and the phone may or may not have applied that
+ * correction. So the absolute number says nothing about which floor you are
+ * on; only the difference from a floor you have stood on and named does.
+ */
+export interface FloorBaseline {
+  /** Median altitude observed while standing on `level`, in metres. */
+  altitude: number;
+  level: number;
+  /** How much the altitudes that produced it varied — the noise floor. */
+  spread: number | null;
+  source: "manual" | "stations";
+  at: number;
 }
 
 export function emptySurvey(): SurveyState {
@@ -91,6 +126,7 @@ export function emptySurvey(): SurveyState {
     stations: [],
     track: [],
     trackTruncated: false,
+    floorBaseline: null,
   };
 }
 
@@ -254,7 +290,7 @@ export function totals(state: SurveyState): SurveyTotals {
   for (const report of reports) {
     const level = report.station.truth.level;
     const entry = byLevel.get(level) ?? {
-      label: toyosuClassroom.floors.find((floor) => floor.level === level)?.label ?? `${level}F`,
+      label: levelLabel(level),
       altitudes: [],
       accuracies: [],
       stations: 0,
@@ -354,4 +390,97 @@ export function toExport(state: SurveyState): string {
     null,
     2,
   );
+}
+
+/* ------------------------------------------------------------------ *
+ * Which floor are you on?
+ *
+ * The horizontal question has an answer the moment a fix arrives; the vertical
+ * one does not, because an absolute GNSS altitude cannot be read against a
+ * building whose ground level nobody has measured. What it can be read against
+ * is one floor the surveyor has stood on and named. Everything below is that
+ * one calibration and what follows from it, kept honest about the two ways it
+ * fails: no altitude at all, and an altitude too noisy to separate storeys.
+ * ------------------------------------------------------------------ */
+
+/** Sea-level pressure varies, GNSS altitude wanders; both drag the baseline. */
+export const BASELINE_STALE_MS = 90 * 60 * 1000;
+
+/**
+ * A baseline recovered from the stations already recorded. Each station knows
+ * its floor and its median altitude, so subtracting the storey pitch from each
+ * puts them all on a common ground level; the median of that is the baseline.
+ */
+export function baselineFromStations(stations: Station[], storeyMetres: number): FloorBaseline | null {
+  const grounds: number[] = [];
+  let newest = 0;
+  for (const station of stations) {
+    const summary = summarize(station.fixes);
+    if (summary?.altitudeMedian == null) continue;
+    grounds.push(summary.altitudeMedian - station.truth.level * storeyMetres);
+    newest = Math.max(newest, station.endedAt);
+  }
+  if (grounds.length === 0) return null;
+  const ground = median(grounds);
+  return {
+    altitude: ground,
+    level: 0,
+    spread: grounds.length > 1 ? percentile(grounds.map((value) => Math.abs(value - ground)), 0.95) : null,
+    source: "stations",
+    at: newest,
+  };
+}
+
+export interface FloorEstimate {
+  /** Nearest whole level, which is the answer. */
+  level: number;
+  /** Where the altitude actually sits between levels — 3.4 means "just above 3F". */
+  fractional: number;
+  /** Metres from the estimated floor's own height; large means "between floors". */
+  offset: number;
+  /**
+   * The estimate is only as good as the calibration and the vertical noise
+   * together. Below half a storey the floor is genuinely decided; above a
+   * storey the number is a guess with the storeys' name on it.
+   */
+  uncertaintyMetres: number | null;
+  confidence: "decided" | "likely" | "unusable";
+  baselineAgeMs: number;
+}
+
+/**
+ * `altitudeAccuracy` is what the device claims; the baseline's own spread is
+ * what we measured. Neither alone describes the error, so they add in
+ * quadrature, and the result is compared with the storey pitch — the only
+ * distance that matters here.
+ */
+export function estimateFloor(
+  altitude: number,
+  altitudeAccuracy: number | null,
+  baseline: FloorBaseline,
+  storeyMetres: number,
+  at: number = Date.now(),
+): FloorEstimate {
+  const fractional = baseline.level + (altitude - baseline.altitude) / storeyMetres;
+  const level = Math.round(fractional);
+  const parts = [altitudeAccuracy, baseline.spread].filter((value): value is number => value != null);
+  const uncertaintyMetres = parts.length
+    ? Math.hypot(...parts)
+    : null;
+  const confidence: FloorEstimate["confidence"] =
+    uncertaintyMetres === null
+      ? "likely"
+      : uncertaintyMetres < storeyMetres / 2
+        ? "decided"
+        : uncertaintyMetres < storeyMetres
+          ? "likely"
+          : "unusable";
+  return {
+    level,
+    fractional,
+    offset: (fractional - level) * storeyMetres,
+    uncertaintyMetres,
+    confidence,
+    baselineAgeMs: at - baseline.at,
+  };
 }

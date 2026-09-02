@@ -1,25 +1,32 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  CAMPUS_SHEET,
   COORDINATE_VERSION,
   METRES_PER_PLAN_PX,
   NORTH_BEARING_DEG,
   bearingDeg,
+  campusPxToLocal,
+  campusPxToPlanPx,
+  campusPxToWgs84,
   distanceMetres,
   insideGeofence,
-  localToPlanPx,
-  planPxToLocal,
-  planPxToWgs84,
+  localToCampusPx,
+  planPxToCampusPx,
+  structuresAt,
   wgs84ToLocal,
+  type CampusPx,
   type LocalEnu,
 } from "@/lib/geo/campus-georeference";
 import {
+  BASELINE_STALE_MS,
   TRUTH_CONFIDENCE,
   appendTrack,
+  baselineFromStations,
   emptySurvey,
+  estimateFloor,
   loadSurvey,
   reportFor,
   saveSurvey,
@@ -29,12 +36,13 @@ import {
   totals,
   truthLocal,
   type Fix,
+  type FloorBaseline,
   type GroundTruth,
   type SurveyState,
   type TruthConfidence,
 } from "@/lib/geo/survey-log";
-import { withBasePath } from "@/lib/base-path";
-import { toyosuClassroom } from "@/lib/map/buildings";
+import { CampusPlan, type StationPin } from "./campus-plan";
+import { buildingById, campusLevels, levelLabel, toyosuClassroom } from "@/lib/map/buildings";
 import { LEVEL_HEIGHT, METRES_PER_UNIT } from "@/lib/map/plan-transform";
 
 /**
@@ -57,6 +65,11 @@ import { LEVEL_HEIGHT, METRES_PER_UNIT } from "@/lib/map/plan-transform";
  * the crosshair cannot leave the middle of the drawing. A tap places the mark
  * anywhere, and the nudges — one plan pixel is 6 cm — get past the width of a
  * finger without needing to zoom in first.
+ *
+ * The plan the tap lands on is the whole campus (`CampusPlan`), not one
+ * building, because a surveyor standing on the deck or the paving has to be
+ * able to point at where they are. The floor picker is therefore campus-wide
+ * too: levels run B1 to 14F, and no single building has them all.
  */
 
 const PLAN = toyosuClassroom.plan;
@@ -64,8 +77,9 @@ const PLAN = toyosuClassroom.plan;
 const STOREY_METRES = LEVEL_HEIGHT * METRES_PER_UNIT;
 const SAMPLE_SECONDS = [30, 60, 120];
 const GEOFENCE_MARGIN_METRES = 15;
-const ZOOM_LIMITS = { min: 0.12, max: 6 };
 const NUDGES = [1, 5, 20];
+/** Where the mark starts: the middle of the building the origin is measured on. */
+const HOME_MARK = planPxToCampusPx({ buildingId: toyosuClassroom.id, x: PLAN.widthPx / 2, y: PLAN.heightPx / 2 });
 
 interface Sampling {
   truth: GroundTruth;
@@ -76,10 +90,17 @@ interface Sampling {
   fixes: Fix[];
 }
 
-/** A zero-width viewport (hidden tab, odd embed) must not produce a zoom of 0. */
-function clampZoom(value: number): number {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(ZOOM_LIMITS.max, Math.max(ZOOM_LIMITS.min, value));
+/** Keep the mark on the sheet; off it there is no drawing and no ground. */
+function clampToSheet(px: CampusPx): CampusPx {
+  return {
+    x: Math.min(CAMPUS_SHEET.x + CAMPUS_SHEET.width, Math.max(CAMPUS_SHEET.x, px.x)),
+    y: Math.min(CAMPUS_SHEET.y + CAMPUS_SHEET.height, Math.max(CAMPUS_SHEET.y, px.y)),
+  };
+}
+
+function structureNames(ids: string[]): string {
+  const names = ids.map((id) => buildingById(id)?.name ?? id);
+  return names.length ? names.join(" / ") : "建物の外（屋外）";
 }
 
 function metres(value: number | null | undefined, digits = 1): string {
@@ -104,11 +125,11 @@ export function SurveyScreen() {
   const [sampling, setSampling] = useState<Sampling | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const [floorId, setFloorId] = useState(toyosuClassroom.floors[0].id);
-  // Fit the plan width on first paint. Safe to read `window` here: this
-  // component is only ever loaded client-side (see survey-client.tsx).
-  const [zoom, setZoom] = useState(() => clampZoom((window.innerWidth - 44) / PLAN.widthPx));
-  const [mark, setMark] = useState({ x: PLAN.widthPx / 2, y: PLAN.heightPx / 2 });
+  const [level, setLevel] = useState(1);
+  // Reported by the plan, which owns the view; used only for the readout that
+  // says how finely a tap alone can land.
+  const [scale, setScale] = useState(0.2);
+  const [mark, setMark] = useState<CampusPx>(HOME_MARK);
 
   const [label, setLabel] = useState("");
   const [confidence, setConfidence] = useState<TruthConfidence>("feature");
@@ -117,13 +138,10 @@ export function SurveyScreen() {
   const [showExport, setShowExport] = useState(false);
 
   const watchId = useRef<number | null>(null);
-  const canvas = useRef<HTMLDivElement>(null);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
-
-  const floor = toyosuClassroom.floors.find((candidate) => candidate.id === floorId) ?? toyosuClassroom.floors[0];
 
   // Serializing on every fix would be a needless megabyte a minute, so the log
   // is written on a timer, when the screen goes away, and when the phone is
@@ -218,27 +236,15 @@ export function SurveyScreen() {
     return () => window.clearTimeout(timer);
   }, [sampling, finishSampling]);
 
-  /** Screen point -> plan pixel, straight off the rendered box. */
-  const placeMark = (event: React.MouseEvent<HTMLDivElement>) => {
-    const element = canvas.current;
-    if (!element) return;
-    const box = element.getBoundingClientRect();
-    setMark({
-      x: Math.min(PLAN.widthPx, Math.max(0, ((event.clientX - box.left) / box.width) * PLAN.widthPx)),
-      y: Math.min(PLAN.heightPx, Math.max(0, ((event.clientY - box.top) / box.height) * PLAN.heightPx)),
-    });
-  };
-
   const nudge = (dx: number, dy: number) =>
-    setMark((current) => ({
-      x: Math.min(PLAN.widthPx, Math.max(0, current.x + dx)),
-      y: Math.min(PLAN.heightPx, Math.max(0, current.y + dy)),
-    }));
+    setMark((current) => clampToSheet({ x: current.x + dx, y: current.y + dy }));
 
   const current: LocalEnu | null = latest ? wgs84ToLocal({ lat: latest.lat, lon: latest.lon }) : null;
-  const currentPx = current ? localToPlanPx(toyosuClassroom.id, current) : null;
-  const markLocal = planPxToLocal({ buildingId: toyosuClassroom.id, ...mark });
-  const markWgs = planPxToWgs84({ buildingId: toyosuClassroom.id, ...mark });
+  const currentPx = current ? localToCampusPx(current) : null;
+  const markLocal = campusPxToLocal(mark);
+  const markWgs = campusPxToWgs84(mark);
+  const markPlanPx = campusPxToPlanPx(toyosuClassroom.id, mark);
+  const markStructures = structuresAt(markLocal, level);
   const offset = current ? distanceMetres(current, markLocal) : null;
 
   const reports = useMemo(() => state.stations.map(reportFor), [state.stations]);
@@ -246,7 +252,52 @@ export function SurveyScreen() {
   const samplingSummary = sampling ? summarize(sampling.fixes) : null;
   const exportText = useMemo(() => (showExport ? toExport(state) : ""), [showExport, state]);
   /** Ground distance per screen pixel — how finely a tap alone can land. */
-  const tapResolution = METRES_PER_PLAN_PX / zoom;
+  const tapResolution = METRES_PER_PLAN_PX / scale;
+
+  const pins: StationPin[] = useMemo(
+    () =>
+      state.stations.map((station) => ({
+        id: station.id,
+        level: station.truth.level,
+        px: planPxToCampusPx({ buildingId: toyosuClassroom.id, x: station.truth.x, y: station.truth.y }),
+      })),
+    [state.stations],
+  );
+
+  // A baseline the surveyor set by hand wins: they were standing on the floor
+  // they named, which is a stronger claim than one reconstructed from stations
+  // that may all share one bad altitude.
+  const derivedBaseline = useMemo(
+    // Keyed on the stations, not the whole state: the track grows with every
+    // fix and re-summarizing every station once a second buys nothing.
+    () => baselineFromStations(state.stations, STOREY_METRES),
+    [state.stations],
+  );
+  const baseline: FloorBaseline | null = state.floorBaseline ?? derivedBaseline;
+  const floorEstimate =
+    latest?.altitude != null && baseline
+      ? estimateFloor(latest.altitude, latest.altitudeAccuracy, baseline, STOREY_METRES, now)
+      : null;
+
+  const calibrate = () => {
+    if (latest?.altitude == null) return;
+    // Prefer the median of the last half-minute over the single latest fix: a
+    // GNSS altitude jumps several metres between consecutive samples, and the
+    // baseline is the one number every later estimate is measured from.
+    const recent = state.track.filter((fix) => fix.t >= latest.t - 30000);
+    const window = summarize(recent.length >= 3 ? recent : [latest]);
+    const altitude = window?.altitudeMedian ?? latest.altitude;
+    setState((previous) => ({
+      ...previous,
+      floorBaseline: {
+        altitude,
+        level,
+        spread: window?.altitudeSpreadP95 ?? latest.altitudeAccuracy,
+        source: "manual",
+        at: Date.now(),
+      },
+    }));
+  };
 
   const download = () => {
     const blob = new Blob([toExport(state)], { type: "application/json" });
@@ -288,66 +339,26 @@ export function SurveyScreen() {
 
         <div className="survey-floor-row">
           <div className="survey-floors">
-            {toyosuClassroom.floors.map((candidate) => (
+            {campusLevels.map((candidate) => (
               <button
-                key={candidate.id}
+                key={candidate.level}
                 type="button"
-                className={`small-button ${candidate.id === floorId ? "is-active" : ""}`}
-                onClick={() => setFloorId(candidate.id)}
+                className={`small-button ${candidate.level === level ? "is-active" : ""}`}
+                onClick={() => setLevel(candidate.level)}
               >{candidate.label}</button>
             ))}
           </div>
-          <div className="survey-zoom">
-            <button className="small-button" type="button" onClick={() => setZoom((value) => clampZoom(value / 1.6))}>−</button>
-            <span>{Math.round(zoom * 100)}%</span>
-            <button className="small-button" type="button" onClick={() => setZoom((value) => clampZoom(value * 1.6))}>＋</button>
-          </div>
         </div>
 
-        <div className="survey-plan-viewport">
-          <div
-            className="survey-plan-canvas"
-            ref={canvas}
-            style={{ width: PLAN.widthPx * zoom, height: PLAN.heightPx * zoom }}
-            onClick={placeMark}
-            role="presentation"
-          >
-            <Image
-              src={withBasePath(floor.texture)}
-              alt={`${floor.label} ${toyosuClassroom.name}平面図`}
-              width={PLAN.widthPx}
-              height={PLAN.heightPx}
-              unoptimized
-              priority
-              style={{ width: "100%", height: "100%" }}
-            />
-            <svg className="survey-plan-overlay" viewBox={`0 0 ${PLAN.widthPx} ${PLAN.heightPx}`} aria-hidden="true">
-              {currentPx && latest && (
-                <>
-                  <circle className="survey-plot-accuracy" cx={currentPx.x} cy={currentPx.y} r={latest.accuracy / METRES_PER_PLAN_PX} />
-                  <circle className="survey-plot-me" cx={currentPx.x} cy={currentPx.y} r={7 / zoom} />
-                </>
-              )}
-              {reports.map((entry) =>
-                entry.station.truth.floorId === floorId ? (
-                  <rect
-                    key={entry.station.id}
-                    className="survey-plot-station"
-                    x={entry.station.truth.x - 5 / zoom}
-                    y={entry.station.truth.y - 5 / zoom}
-                    width={10 / zoom}
-                    height={10 / zoom}
-                  />
-                ) : null,
-              )}
-              <g className="survey-plot-mark">
-                <line x1={mark.x} y1={mark.y - 22 / zoom} x2={mark.x} y2={mark.y + 22 / zoom} strokeWidth={1.5 / zoom} />
-                <line x1={mark.x - 22 / zoom} y1={mark.y} x2={mark.x + 22 / zoom} y2={mark.y} strokeWidth={1.5 / zoom} />
-                <circle cx={mark.x} cy={mark.y} r={6 / zoom} strokeWidth={1.5 / zoom} />
-              </g>
-            </svg>
-          </div>
-        </div>
+        <CampusPlan
+          level={level}
+          mark={mark}
+          onMarkChange={setMark}
+          me={currentPx}
+          meAccuracyMetres={latest?.accuracy ?? null}
+          stations={pins}
+          onScaleChange={setScale}
+        />
 
         <div className="survey-nudge">
           <span>微調整</span>
@@ -363,18 +374,17 @@ export function SurveyScreen() {
         </div>
 
         <dl className="survey-readout">
-          <div><dt>指した点</dt><dd>{floor.label} / px {Math.round(mark.x)}, {Math.round(mark.y)}</dd></div>
+          <div>
+            <dt>指した点</dt>
+            <dd>
+              {levelLabel(level)} / {structureNames(markStructures)}
+              <small>教室棟図面座標 px {Math.round(markPlanPx.x)}, {Math.round(markPlanPx.y)}</small>
+            </dd>
+          </div>
           <div><dt>その点の緯度経度</dt><dd>{markWgs.lat.toFixed(7)}, {markWgs.lon.toFixed(7)}</dd></div>
           <div><dt>画面1pxの細かさ</dt><dd className={tapResolution > 1 ? "is-warn" : ""}>{tapResolution.toFixed(2)} m<small>タップだけで詰められる限界。ボタンなら 6cm 単位</small></dd></div>
           {offset !== null && <div><dt>測位値とのずれ</dt><dd><strong>{metres(offset)}</strong></dd></div>}
         </dl>
-
-        {currentPx && (
-          <p className="survey-note">
-            測位値は {floor.label} 図面上の px {Math.round(currentPx.x)}, {Math.round(currentPx.y)}
-            {(currentPx.x < 0 || currentPx.x > PLAN.widthPx || currentPx.y < 0 || currentPx.y > PLAN.heightPx) && "（教室棟の図面の外）"}
-          </p>
-        )}
       </section>
 
       <section className="survey-grid">
@@ -387,12 +397,97 @@ export function SurveyScreen() {
               <div><dt>高度</dt><dd className={latest.altitude === null ? "is-warn" : ""}>{latest.altitude === null ? "返ってこない" : `${latest.altitude.toFixed(1)} m ±${latest.altitudeAccuracy?.toFixed(1) ?? "?"}`}</dd></div>
               <div><dt>ローカルENU</dt><dd>E {current.east.toFixed(1)} / N {current.north.toFixed(1)}</dd></div>
               <div><dt>ジオフェンス</dt><dd>{insideGeofence(current, GEOFENCE_MARGIN_METRES) ? `内側（+${GEOFENCE_MARGIN_METRES}m 余裕）` : "外側"}</dd></div>
+              <div>
+                <dt>測位値が乗っている建物</dt>
+                <dd>{structureNames(structuresAt(current, floorEstimate?.level ?? level))}</dd>
+              </div>
               <div><dt>指した点への方位</dt><dd>{degrees(bearingDeg(current, markLocal))}</dd></div>
               <div><dt>最終更新</dt><dd>{clock(latest.t)}（{state.track.length} fix）</dd></div>
             </dl>
           ) : (
             <p className="survey-empty">{watching ? "最初の fix を待っています…" : "「測位を開始」で watchPosition を開始します。"}</p>
           )}
+        </article>
+
+        <article className="survey-card">
+          <div className="survey-card-head">
+            <h2>いま何階にいるか</h2>
+            <span className="survey-totals">階高 {STOREY_METRES.toFixed(1)} m</span>
+          </div>
+          {latest === null ? (
+            <p className="survey-empty">測位を開始すると、高度から階を推定します。</p>
+          ) : latest.altitude === null ? (
+            <p className="survey-empty is-warn">
+              この fix は <code>altitude: null</code> です。高度が返らない以上、Web から階を決める材料はありません
+              （どの階にいるかは手で選んでください）。
+            </p>
+          ) : baseline === null ? (
+            <p className="survey-empty">
+              高度は {latest.altitude.toFixed(1)} m 返っています。ただし GNSS の高度は楕円体高で、
+              地面が何メートルなのかは測っていません。いま立っている階を上で選んで、下のボタンで基準を作ってください。
+            </p>
+          ) : floorEstimate ? (
+            <dl className="survey-readout">
+              <div>
+                <dt>推定</dt>
+                <dd>
+                  <strong className={floorEstimate.confidence === "unusable" ? "is-warn" : ""}>
+                    {levelLabel(floorEstimate.level)}
+                  </strong>
+                  <small>
+                    高度上は {floorEstimate.fractional.toFixed(2)} 階相当
+                    （その階の床から {floorEstimate.offset >= 0 ? "+" : ""}{floorEstimate.offset.toFixed(1)} m）
+                  </small>
+                </dd>
+              </div>
+              <div>
+                <dt>どれくらい信じてよいか</dt>
+                <dd className={floorEstimate.confidence === "decided" ? "" : "is-warn"}>
+                  {floorEstimate.confidence === "decided"
+                    ? "階として決まる"
+                    : floorEstimate.confidence === "likely"
+                      ? "隣の階と紛れうる"
+                      : "階は決められない"}
+                  <small>
+                    高さの不確かさ {metres(floorEstimate.uncertaintyMetres)}
+                    {floorEstimate.uncertaintyMetres === null && "（端末が申告せず、基準の再現性も未測定）"}
+                  </small>
+                </dd>
+              </div>
+              <div>
+                <dt>選択中の階との一致</dt>
+                <dd className={floorEstimate.level === level ? "" : "is-warn"}>
+                  {floorEstimate.level === level ? "一致" : `不一致（選択は ${levelLabel(level)}）`}
+                </dd>
+              </div>
+              <div>
+                <dt>基準</dt>
+                <dd>
+                  {baseline.source === "manual" ? "手で較正" : "記録済み地点から復元"}
+                  <small>
+                    {levelLabel(baseline.level)} の床 = 高度 {baseline.altitude.toFixed(1)} m ／
+                    {Math.round(floorEstimate.baselineAgeMs / 60000)} 分前
+                    {floorEstimate.baselineAgeMs > BASELINE_STALE_MS && " ・古い（取り直しを）"}
+                  </small>
+                </dd>
+              </div>
+            </dl>
+          ) : null}
+          <div className="button-row survey-baseline-actions">
+            <button
+              className="button button-secondary"
+              type="button"
+              disabled={latest?.altitude == null}
+              onClick={calibrate}
+            >いまの高度を {levelLabel(level)} の床にする</button>
+            {state.floorBaseline && (
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => setState((previous) => ({ ...previous, floorBaseline: null }))}
+              >較正を消す</button>
+            )}
+          </div>
         </article>
 
         <article className="survey-card">
@@ -414,7 +509,9 @@ export function SurveyScreen() {
             <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="窓際、空の見え方、混雑など" />
           </label>
           <div className="survey-row">
-            <span className="survey-note">{floor.label} / px {Math.round(mark.x)}, {Math.round(mark.y)}</span>
+            <span className="survey-note">
+              {levelLabel(level)} / {structureNames(markStructures)}
+            </span>
             <div className="survey-seconds">
               {SAMPLE_SECONDS.map((value) => (
                 <button
@@ -450,7 +547,14 @@ export function SurveyScreen() {
               disabled={!watching}
               onClick={() =>
                 setSampling({
-                  truth: { floorId, level: floor.level, x: mark.x, y: mark.y, confidence },
+                  truth: {
+                    floorId: String(level),
+                    level,
+                    buildingId: markStructures[0],
+                    x: markPlanPx.x,
+                    y: markPlanPx.y,
+                    confidence,
+                  },
                   label,
                   note,
                   startedAt: Date.now(),

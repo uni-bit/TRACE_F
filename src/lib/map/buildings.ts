@@ -334,3 +334,43 @@ export const buildings: BuildingDefinition[] = [
   toyosuEastConnector,
   toyosuRoofGarden,
 ];
+
+export interface CampusLevel {
+  level: number;
+  label: string;
+  /** Structures that have a floor at this level, largest plate first. */
+  buildingIds: string[];
+}
+
+/** B1 is the only level below grade, and the only one whose label is not `${n}F`. */
+export function levelLabel(level: number): string {
+  return level <= 0 ? `B${1 - level}F` : `${level}F`;
+}
+
+/**
+ * Every level the campus has a drawing for, in order. The classroom building
+ * stops at 6F while the research and headquarters towers run to 14F, so a
+ * campus-wide floor picker cannot be built from any one building's floors.
+ */
+export const campusLevels: CampusLevel[] = (() => {
+  const byLevel = new Map<number, string[]>();
+  for (const building of buildings) {
+    for (const floor of building.floors) {
+      const entry = byLevel.get(floor.level) ?? [];
+      entry.push(building.id);
+      byLevel.set(floor.level, entry);
+    }
+  }
+  const area = new Map(buildings.map((building) => [building.id, building.masterRect.w * building.masterRect.h]));
+  return [...byLevel.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, buildingIds]) => ({
+      level,
+      label: levelLabel(level),
+      buildingIds: buildingIds.sort((a, b) => (area.get(b) ?? 0) - (area.get(a) ?? 0)),
+    }));
+})();
+
+export function buildingById(id: string): BuildingDefinition | undefined {
+  return buildings.find((building) => building.id === id);
+}
