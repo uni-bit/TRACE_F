@@ -1,0 +1,9 @@
+{
+  "name": "TRACE 定期ログ",
+  "short_name": "TRACE",
+  "start_url": "./log",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1ed",
+  "theme_color": "#6e48e5"
+}

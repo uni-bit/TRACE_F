@@ -247,3 +247,30 @@ h1 { font-size: clamp(3.1rem, 7.5vw, 6.6rem); letter-spacing: -.075em; line-heig
 .survey-table tr.is-worst td { background: rgba(242,139,109,.11); }
 .survey-export { width: 100%; margin-top: 10px; padding: 9px; border: 1px solid var(--line); border-radius: 8px; font: .68rem/1.45 monospace; }
 @media (max-width: 560px) { .survey-actions { width: 100%; } .survey-actions .button { flex: 1; } }
+
+/* Timed photo log (/log) */
+.ping { width: 100%; max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; display: flex; flex-direction: column; gap: 16px; }
+.ping h1 { margin: 0; font-size: 1.8rem; }
+.ping h2 { margin: 0; font-size: 1.05rem; }
+.ping-eyebrow { margin: 0; font-size: .72rem; letter-spacing: .16em; color: var(--violet); font-weight: 700; }
+.ping-muted { margin: 0; color: var(--muted); }
+.ping-small { font-size: .8rem; }
+.ping-warn { color: #b4492c; }
+.ping-card { background: var(--paper-bright); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.ping-due { border-color: var(--coral); background: #fff3ee; }
+.ping-due strong { font-size: 1.3rem; }
+.ping-due p { margin: 0; }
+.ping-countdown { font-size: 2.6rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ping-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.ping-row > * { flex: 1 1 140px; }
+.ping-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-weight: 700; cursor: pointer; text-align: center; }
+.ping-primary { background: var(--violet); border-color: var(--violet); color: #fff; }
+.ping-quiet { background: transparent; }
+.ping-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ping-message { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--mint); }
+.ping-list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.ping-link { background: none; border: 0; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.ping-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ping-entry { display: flex; gap: 12px; align-items: center; background: var(--paper-bright); border: 1px solid var(--line); border-radius: 14px; padding: 8px; }
+.ping-entry img { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; flex: none; }
+.ping-entry > div { display: flex; flex-direction: column; min-width: 0; }
