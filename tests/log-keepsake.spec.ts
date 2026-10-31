@@ -361,6 +361,7 @@ test("after a replay, home's QR code button reads the booth's code again for ano
   await page.getByRole("button", { name: "作品を見る" }).click();
   await expect(page.locator(".keep")).toBeVisible();
   await page.getByRole("button", { name: "ホームへもどる", exact: true }).last().click();
+  await shoot(page, "home-after-replay");
 
   for (const visit of [1, 2]) {
     const link = boothLink(new URL(page.url()).origin);
