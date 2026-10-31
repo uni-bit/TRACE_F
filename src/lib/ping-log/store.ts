@@ -26,8 +26,9 @@ export type LogEntry = {
   memorySessionId?: string;
   /**
    * TRACE_B's record of the photo's checkpoint and time (#13), once it has
-   * one. Absent while that is still to be sent; null when it never will be:
-   * the photo was taken after the arrival, or TRACE_B turned it down.
+   * one. Absent while that is still to be sent; null when TRACE_B turned it
+   * down (and, before the replay could be asked for again, when the photo was
+   * taken after the arrival).
    */
   photoMomentId?: string | null;
 };

@@ -324,6 +324,60 @@ test("the internal camera rejects raw or foreign input and submits only a same-o
   expect(await page.evaluate((token) => JSON.stringify(Object.entries(localStorage)).includes(token), link.token)).toBe(false);
 });
 
+test("after a replay, home's QR code button reads the booth's code again for another replay, under a new key", async ({ context, page }) => {
+  const backend = await standIn(context);
+  await join(page);
+  await savePhoto(page, 1);
+  // The camera sees whatever window.arrivalScannerText says.
+  const scanner = () => {
+    Object.defineProperty(globalThis, "BarcodeDetector", { configurable: true, value: class {
+      static async getSupportedFormats() { return ["qr_code"]; }
+      async detect() {
+        const text = Reflect.get(window, "arrivalScannerText");
+        return typeof text === "string"
+          ? [{ rawValue: text, cornerPoints: [{ x: 80, y: 80 }, { x: 240, y: 80 }, { x: 240, y: 240 }, { x: 80, y: 240 }] }]
+          : [];
+      }
+    } });
+    navigator.mediaDevices.getUserMedia = async () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 320;
+      canvas.height = 320;
+      const context = canvas.getContext("2d")!;
+      const draw = () => { context.fillStyle = "#fff"; context.fillRect(0, 0, 320, 320); };
+      draw();
+      const stream = canvas.captureStream(10);
+      const timer = window.setInterval(draw, 100);
+      stream.getVideoTracks()[0].addEventListener("ended", () => window.clearInterval(timer));
+      return stream;
+    };
+  };
+  await page.addInitScript(scanner);
+  const read = (url: string) => page.evaluate((text) => { Reflect.set(window, "arrivalScannerText", text); }, url);
+
+  // TRACE_B played this participation's replay already: home leads to the keepsake, and to the QR code again.
+  backend.replay = "completed";
+  await page.reload();
+  await page.getByRole("button", { name: "作品を見る" }).click();
+  await expect(page.locator(".keep")).toBeVisible();
+  await page.getByRole("button", { name: "ホームへもどる", exact: true }).last().click();
+
+  for (const visit of [1, 2]) {
+    const link = boothLink(new URL(page.url()).origin);
+    await read(link.url);
+    await page.getByRole("button", { name: "QR コードを読み取る" }).click();
+    await expect(page.getByRole("heading", { name: "スクリーンを見てください" })).toBeVisible();
+    expect(backend.arrivals).toHaveLength(visit);
+    expect(backend.arrivals[visit - 1].checkpointToken).toBe(link.token);
+    backend.replay = "completed";
+    await expect(page.getByRole("heading", { name: "作品を保存できます" })).toBeVisible({ timeout: 15000 });
+    await read("");
+    await page.getByRole("button", { name: "ホームへもどる", exact: true }).last().click();
+    await expect(page.getByRole("button", { name: "QR コードを読み取る" })).toBeVisible();
+  }
+  expect(backend.arrivals[0].key).not.toBe(backend.arrivals[1].key);
+});
+
 /** Takes a photo and saves it at a place picked from the list: building, floor, place. */
 async function savePhoto(page: Page, number: number, [building, floor, place] = ["本部棟", "5F", "本部棟5F"]) {
   await page.locator('input[type="file"][capture]').setInputFiles(PHOTO);
@@ -546,13 +600,37 @@ test("each photo's place and time go to TRACE_B, never the photo; a photo delete
   expect(await kept(page)).toBe(1);
   expect([...backend.moments.values()].map((moment) => moment.photoMomentId)).toEqual(["photo_2"]);
 
-  // A photo taken after the arrival stays off TRACE_B, whose way to ShibaLab ends at the photo before it.
+  // A photo taken after the arrival goes to TRACE_B too, for the next replay.
   backend.replay = "completed";
   await page.reload();
   await expect(page.getByRole("button", { name: "作品を見る" })).toBeVisible();
   await savePhoto(page, 2, ["交流棟", "3F", "交流棟3F 食堂"]);
-  await expect.poll(() => momentIds(page)).toEqual(["photo_2", null]);
-  expect(backend.sent).toHaveLength(2);
+  await expect.poll(() => momentIds(page)).toEqual(["photo_2", "photo_3"]);
+  expect(backend.sent).toHaveLength(3);
+
+  // One an earlier version kept off TRACE_B after the arrival (null) goes once the page opens again.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open("trace-ping-log");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const store = open.result.transaction("entries", "readwrite").objectStore("entries");
+          const request = store.getAll();
+          request.onsuccess = () => {
+            const entries = request.result as { record: { takenAt: string }; photoMomentId?: string | null }[];
+            const last = entries.sort((a, b) => a.record.takenAt.localeCompare(b.record.takenAt)).at(-1)!;
+            store.put({ ...last, photoMomentId: null }).onsuccess = () => {
+              open.result.close();
+              resolve();
+            };
+          };
+        };
+      }),
+  );
+  await page.reload();
+  await expect.poll(() => momentIds(page)).toEqual(["photo_2", "photo_3"]);
+  expect(backend.sent).toHaveLength(4);
 });
 
 test("a photo whose answer from TRACE_B was lost is found there by its id when deleted, and deleted there too", async ({ context, page }) => {

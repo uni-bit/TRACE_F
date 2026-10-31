@@ -28,7 +28,8 @@ import { Icon, Phrases, Screen, Sentences, SWAP, useField, useRay } from "./stag
  * booth's projected picture, the arrival goes to TRACE_B, and the phone
  * follows the replay on the room's screen until it has played or been skipped.
  * Then the photos taken before arriving become the keepsake (keepsake.tsx),
- * shown under the way between their places, 振り返り3D (trace.tsx).
+ * shown under the way between their places, 振り返り3D (trace.tsx). Reading
+ * the code again after the replay asks for another, with the photos since.
  *
  * As in the demo, the phone shows no queue, no wait and no symbol. The camera
  * picture never leaves the phone: only the code read from it is sent.
@@ -62,6 +63,7 @@ type ReadAnswer = { ok: true } | { ok: false; code: string; message: string; ret
 /**
  * onArrived: TRACE_B has the arrival, now or from before; it ends the photo reminder then.
  * toKeepsake: opened from home after arriving, so a replay that is over leads straight to the keepsake.
+ * again: opened from home's QR code button after arriving: the camera reads the booth's code for another replay.
  */
 export function ArrivalFlow({
   target,
@@ -69,6 +71,7 @@ export function ArrivalFlow({
   photos,
   contact,
   toKeepsake,
+  again,
   ended,
   inert,
   onClose,
@@ -84,6 +87,7 @@ export function ArrivalFlow({
   /** Where to ask about the data, shown with the keepsake. */
   contact: string;
   toKeepsake: boolean;
+  again: boolean;
   ended: boolean;
   inert: boolean;
   onClose: () => void;
@@ -142,9 +146,10 @@ export function ArrivalFlow({
   }, [ended]);
 
   // Arrived already (a reload, or the button pressed again): straight to where the replay stands.
+  // Not when the camera was opened for another replay: the code it reads asks TRACE_B for one.
   useEffect(() => {
     let alive = true;
-    if (ended) return;
+    if (ended || again) return;
     getExperience(experienceId, memory)
       .then((state) => {
         const known = replayStatus(state.replayStatus);
@@ -160,7 +165,7 @@ export function ArrivalFlow({
     return () => {
       alive = false;
     };
-  }, [go, experienceId, memory, toKeepsake, ended]);
+  }, [go, experienceId, memory, toKeepsake, again, ended]);
 
   const read = useCallback(
     async (code: string): Promise<ReadAnswer> => {
@@ -597,7 +602,10 @@ function CameraScan({
 function replayText(status: ReplayStatus | null, over: boolean): { title: string; body: string | null } {
   if (over && status === "completed") return { title: "再生が終わりました", body: null };
   if (over && status === "skipped") {
-    return { title: "スクリーンでは再生できませんでした", body: "展示の都合で、今回はスクリーンで再生できませんでした。" };
+    return {
+      title: "スクリーンでは再生できませんでした",
+      body: "展示の都合で、今回はスクリーンで再生できませんでした。展示場の QR コードをもう一度読み取ると、また再生を待てます。",
+    };
   }
   if (status === "queued" || status === null) return { title: "スクリーンの前でお待ちください", body: null };
   return { title: "スクリーンを見てください", body: null };

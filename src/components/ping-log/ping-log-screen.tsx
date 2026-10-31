@@ -441,6 +441,29 @@ export function PingLogScreen() {
   }, [placesRetryAt, sendPlaces]);
 
   /**
+   * Photos taken after an arrival used to stay off TRACE_B for good (null).
+   * Now that the replay can be asked for again, they go too, once per page,
+   * and join the next replay; one TRACE_B turned down is only turned down again.
+   */
+  const reopenedIn = useRef<string | null>(null);
+  useEffect(() => {
+    const memoryId = experience?.memory.memorySessionId;
+    if (!memoryId || reopenedIn.current === memoryId) return;
+    reopenedIn.current = memoryId;
+    void withLock(
+      SEND_LOCK,
+      async () => {
+        for (const entry of await listEntries()) {
+          if (entry.memorySessionId === memoryId && entry.photoMomentId === null && entry.record.place) {
+            await putEntry({ ...entry, photoMomentId: undefined });
+          }
+        }
+      },
+      { waitMs: SEND_WAIT_MS },
+    ).then(sendPlaces, () => undefined);
+  }, [experience, sendPlaces]);
+
+  /**
    * Before the arrival goes, the places still on their way get a moment to
    * reach TRACE_B, so the way the room's screen draws has them; the arrival
    * goes after that whether they did or not.
@@ -747,8 +770,8 @@ export function PingLogScreen() {
     if (photo && (!memorySessionId || !canWriteMemory(memorySessionId))) {
       throw new TraceApiError(409, "STATE_CONFLICT", null);
     }
-    // A photo taken after the arrival stays off TRACE_B: TRACE_B draws the way on to ShibaLab only from a last photo taken before it.
-    await putEntry(memorySessionId && photo ? { ...entry, memorySessionId, ...(arrived ? { photoMomentId: null } : {}) } : entry);
+    // A photo taken after the arrival goes to TRACE_B too: it joins the way on the next replay.
+    await putEntry(memorySessionId && photo ? { ...entry, memorySessionId } : entry);
     if (entry.record.kind === "ping") prompt(null);
     if (photo) {
       setEntries(await listEntries());

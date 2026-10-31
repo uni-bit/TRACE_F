@@ -183,6 +183,8 @@ function Current(
   const onInstall = () => props.openOverlay("install");
   // The TRACE mark leads to the title from every screen that has it.
   const toTitle = () => void go(() => props.onTitle(true));
+  // Home's QR code button after arriving: the arrival opens on the camera, for another replay.
+  const [again, setAgain] = useState(false);
 
   // A skip still clears: the screen tears and flashes negative, as a photo does.
   const skip = async () => {
@@ -197,12 +199,13 @@ function Current(
   if (props.demo === "home" && props.arrival && (!props.ended || props.arrived)) {
     return (
       <ArrivalFlow
-        key={props.incomingArrivalToken ?? "camera"}
+        key={props.incomingArrivalToken ?? (again ? "again" : "camera")}
         target={props.arrival}
         incomingArrivalToken={props.incomingArrivalToken}
         photos={props.photos}
         contact={props.contact}
         toKeepsake={props.arrived}
+        again={again}
         ended={props.ended}
         inert={inert}
         onClose={props.onCloseDemo}
@@ -322,7 +325,14 @@ function Current(
       onReminderInterval={props.onReminderInterval}
       arrived={props.arrived}
       onDelete={props.askDelete}
-      onArrive={() => void go(props.onArrive)}
+      onArrive={() => {
+        setAgain(false);
+        void go(props.onArrive);
+      }}
+      onArriveAgain={() => {
+        setAgain(true);
+        void go(props.onArrive);
+      }}
       onDeveloper={props.onDeveloper}
       onMenu={onMenu}
       onInstall={onInstall}

@@ -359,11 +359,13 @@ type HomeProps = {
   onReminder: (on: boolean) => Promise<string | null>;
   /** Resolves to an error message, or null once the interval is changed. */
   onReminderInterval: (minutes: number) => Promise<string | null>;
-  /** TRACE_B has the arrival: the foot leads to the keepsake instead of the QR code. */
+  /** TRACE_B has the arrival: the foot leads to the keepsake, and to the QR code for another replay. */
   arrived: boolean;
   /** Asks before deleting a photo (#51). */
   onDelete: (entry: LogEntry, number: number) => void;
   onArrive: () => void;
+  /** After arriving: reads the booth's QR code again, for another replay. */
+  onArriveAgain: () => void;
   onDeveloper: () => void;
   onMenu: () => void;
   onInstall: () => void;
@@ -531,12 +533,24 @@ export function HomeScreen(props: HomeProps) {
         ) : props.arrived ? (
           <>
             <p className="body">
-              <Sentences text={props.ended ? "参加は終了しました。残した写真を確認できます。" : "再生が終わったら、撮った写真を一枚の作品にして保存できます。"} />
+              <Sentences
+                text={
+                  props.ended
+                    ? "参加は終了しました。残した写真を確認できます。"
+                    : "撮った写真を一枚の作品にして保存できます。展示場の QR コードをもう一度読み取ると、あとから撮った写真も加えて、何度でも振り返れます。"
+                }
+              />
             </p>
             <button type="button" className="btn" onClick={props.onArrive}>
               <Icon name="arrow" />
               作品を見る
             </button>
+            {!props.ended && (
+              <button type="button" className="btn btn--line" style={{ marginTop: 10 }} onClick={props.onArriveAgain}>
+                <Icon name="qr" />
+                QR コードを読み取る
+              </button>
+            )}
           </>
         ) : (
           <>
