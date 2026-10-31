@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type RefObject } from "react";
 
-import { dropExpired, madeWith, unsubscribe } from "@/lib/ping-log/push";
+import { dropExpired, madeWith, serviceWorkerReady, unsubscribe } from "@/lib/ping-log/push";
 import { fetchPublicConfig, type PublicConfig } from "@/lib/trace-api/client";
 import {
   ENDED_MESSAGE,
@@ -97,7 +97,7 @@ export function useTraceReminder({ experience, config, setConfig, subscription, 
       await askPermission();
       const latest = config ?? (await fetchPublicConfig());
       setConfig(latest);
-      const ready = registration.current ?? (await navigator.serviceWorker.ready);
+      const ready = registration.current ?? (await serviceWorkerReady());
       // The push worker's own subscription is handed back to it before TRACE_B's replaces it.
       const made = await switchOnTraceReminder(ready, memory, latest.notification, current.intervalMinutes, (other) =>
         unsubscribe(other)

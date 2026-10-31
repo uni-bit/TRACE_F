@@ -47,7 +47,12 @@ function openDb(): Promise<IDBDatabase> {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: "id" });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // A newer version opened in another tab waits until this one lets go.
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error ?? new Error("IndexedDBを開けませんでした。"));
   });
 }
@@ -73,6 +78,8 @@ export async function putEntry(entry: LogEntry): Promise<void> {
       resolve();
     };
     tx.onerror = () => reject(tx.error ?? new Error("記録を保存できませんでした。"));
+    // A full disk shows only as an abort (Safari), never as an error; without this the save would wait forever.
+    tx.onabort = tx.onerror;
   });
 }
 
@@ -87,6 +94,7 @@ export async function deleteEntry(id: string): Promise<void> {
       resolve();
     };
     tx.onerror = () => reject(tx.error ?? new Error("写真を削除できませんでした。"));
+    tx.onabort = tx.onerror;
   });
 }
 
@@ -100,6 +108,7 @@ export async function clearEntries(): Promise<void> {
       resolve();
     };
     tx.onerror = () => reject(tx.error ?? new Error("記録を削除できませんでした。"));
+    tx.onabort = tx.onerror;
   });
 }
 
@@ -120,5 +129,6 @@ export async function clearSessionEntries(): Promise<void> {
       resolve();
     };
     tx.onerror = () => reject(tx.error ?? new Error("記録を削除できませんでした。"));
+    tx.onabort = tx.onerror;
   });
 }

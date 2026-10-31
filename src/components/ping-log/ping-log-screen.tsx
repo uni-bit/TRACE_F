@@ -14,6 +14,7 @@ import {
   forgetMe,
   sendTestPing,
   isUploadablePhoto,
+  serviceWorkerReady,
   subscribe,
   subscriptionExpiresAt,
   subscriptionPlan,
@@ -100,20 +101,21 @@ const START_AGAIN = "もう一度参加するときは、「はじめる」を�
 
 type View = "participant" | "developer";
 
-function read(storage: Storage, key: string): string | null {
+/** window.localStorage itself throws where site data is blocked, so it is reached inside the try. */
+function read(key: string): string | null {
   try {
-    return storage.getItem(key);
+    return window.localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-function write(storage: Storage, key: string, value: string | null): void {
+function write(key: string, value: string | null): void {
   try {
-    if (value === null) storage.removeItem(key);
-    else storage.setItem(key, value);
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, value);
   } catch {
-    // Private mode: it lasts as long as the page.
+    // Private mode, or site data blocked: it lasts as long as the page.
   }
 }
 
@@ -124,15 +126,15 @@ function isToday(value: string): boolean {
 /** The notification waiting for an answer: from the one that opened the page, or one left from earlier today. */
 function initialPending(): string | null {
   if (subscriptionPlan().purpose !== "photo") {
-    write(window.localStorage, PENDING_KEY, null);
+    write(PENDING_KEY, null);
     return null;
   }
   const fromUrl = new URLSearchParams(window.location.search).get("prompt");
   if (fromUrl && !Number.isNaN(Date.parse(fromUrl))) {
-    write(window.localStorage, PENDING_KEY, fromUrl);
+    write(PENDING_KEY, fromUrl);
     return fromUrl;
   }
-  const stored = read(window.localStorage, PENDING_KEY);
+  const stored = read(PENDING_KEY);
   return stored && isToday(stored) ? stored : null;
 }
 
@@ -153,7 +155,7 @@ function initialLostNote(): string {
 }
 
 function initialView(): View {
-  return read(window.localStorage, VIEW_KEY) === "developer" ? "developer" : "participant";
+  return read(VIEW_KEY) === "developer" ? "developer" : "participant";
 }
 
 /** A participant who opened the page from a reminder's notification sees the reminder's own screen first. */
@@ -332,7 +334,7 @@ export function PingLogScreen() {
   }, []);
 
   const prompt = useCallback((value: string | null) => {
-    write(window.localStorage, PENDING_KEY, value);
+    write(PENDING_KEY, value);
     setPendingAt(value);
   }, []);
 
@@ -617,7 +619,7 @@ export function PingLogScreen() {
   };
 
   const switchView = (next: View) => {
-    write(window.localStorage, VIEW_KEY, next === "developer" ? next : null);
+    write(VIEW_KEY, next === "developer" ? next : null);
     setView(next);
     setMessage("");
   };
@@ -673,7 +675,7 @@ export function PingLogScreen() {
   /** The participant's optional photo reminder is the only new push plan. */
   const subscribeTo = (consentVersion: string, done: string, silent = false) => run(async () => {
     await askPermission();
-    const registration = registrationRef.current ?? (await navigator.serviceWorker.ready);
+    const registration = registrationRef.current ?? (await serviceWorkerReady());
     setSubscription(await subscribe(registration, consentVersion));
     setExpiresAt(subscriptionExpiresAt());
     setPlan(REMINDER_PLAN);

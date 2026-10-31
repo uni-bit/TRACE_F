@@ -1,12 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 
 import { BlobImage } from "@/components/ping-log/blob-image";
 import { Icon, NoteBar, Phrases, Screen, useRay } from "@/components/ping-log/ray/stage";
 import { buildingName, buildingsWithPlaces, checkpointsOn, findCheckpoint, floorsOf, placeOf } from "@/lib/places/select";
 import type { BuildingId, Checkpoint, PhotoPlace, PlacesData } from "@/lib/places/types";
+
+import type { CampusMap as CampusMapView } from "./campus-map";
 
 import "./place-picker.css";
 
@@ -26,7 +28,16 @@ import "./place-picker.css";
  * one may be chosen for any number of photos.
  */
 
-const CampusMap = dynamic(() => import("./campus-map").then((module) => module.CampusMap), {
+/**
+ * Without the map's code (offline, or a deploy replaced it while the page was
+ * open) the list takes its place, as without WebGL, and the photo stays.
+ */
+function MapMissing({ onUnavailable }: ComponentProps<typeof CampusMapView>) {
+  useEffect(() => onUnavailable(), [onUnavailable]);
+  return null;
+}
+
+const CampusMap = dynamic(() => import("./campus-map").then((module) => module.CampusMap, () => MapMissing), {
   ssr: false,
   loading: () => (
     <p className="pp-map__wait mono mono--dim" role="status">

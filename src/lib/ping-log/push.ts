@@ -121,6 +121,20 @@ async function post(path: string, body: unknown): Promise<Response> {
   return response;
 }
 
+/**
+ * The page's service worker. ready never settles when it was never
+ * registered (offline on the first visit, or blocked), which would leave the
+ * reminder's switch and the menu's buttons waiting until a reload.
+ */
+export function serviceWorkerReady(ms = 10_000): Promise<ServiceWorkerRegistration> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error("通知の準備ができていません。ページを読み込み直してから、もう一度試してください。")), ms);
+    }),
+  ]);
+}
+
 /** Only participant photo reminders can create or update a subscription. */
 export async function subscribe(registration: ServiceWorkerRegistration, consentVersion: string): Promise<PushSubscription> {
   const response = await reach("/vapid-public-key");

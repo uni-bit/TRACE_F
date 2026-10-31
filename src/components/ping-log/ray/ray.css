@@ -877,6 +877,17 @@ html:has(.ray) body {
     background: var(--paper);
     color: var(--ink);
   }
+  /* /log's error screen (src/app/log/error.tsx): what happened, and the button at the foot. */
+  & .oops .h1 {
+    margin-top: 40px;
+  }
+  & .oops .small {
+    margin-top: 12px;
+  }
+  & .oops__foot {
+    margin-top: auto;
+    padding-top: 16px;
+  }
   /* Where this phone or browser cannot join (EntryCta): the reason above a button that cannot be pressed, or in its place. */
   & .title__cta .btn[disabled] {
     background: transparent;
